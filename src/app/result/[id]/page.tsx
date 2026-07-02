@@ -51,9 +51,10 @@ export default async function ResultPage({ params }: { params: { id: string } })
         </>
       ) : (
         <div className="relative rounded-card border border-gold-500/40 bg-ink-900/70 p-5">
+          <p className="mb-2 text-xs font-bold text-gold-400">今日のあなたには、まだ続きがあります。</p>
           <div className="pointer-events-none select-none blur-sm">
             <p className="text-sm leading-relaxed text-paper-400">
-              ここから先には、あなたの流れをもっと深く読み解いた内容が続きます…
+              ここから先は、もう少し深く、あなたの流れを読み解いた内容です。
             </p>
           </div>
           <a

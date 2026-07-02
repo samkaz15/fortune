@@ -36,38 +36,40 @@ export default function PlansPage() {
 
       {tab === "subscribe" ? (
         <section className="rounded-card border border-gold-500/40 bg-ink-900/60 p-6">
-          <p className="mb-1 text-xs font-bold text-gold-400">一番人気</p>
+          <p className="mb-1 text-xs font-bold text-gold-400">ずっと、そばに。</p>
           <p className="mb-4 font-display text-2xl text-paper-50">
             初月 <span className="text-gold-400">500円</span>
           </p>
-          <p className="mb-4 text-sm text-paper-400">2ヶ月目以降 月額980円</p>
-          <ul className="mb-6 space-y-2 text-sm text-paper-200">
+          <p className="mb-4 text-sm text-paper-400">2ヶ月目から 月980円</p>
+          <ul className="mb-4 space-y-2 text-sm text-paper-200">
             <li>・診断回数の上限なし</li>
-            <li>・結果を全文いつでも解放</li>
-            <li>・オークションへの入札権</li>
+            <li>・結果はいつでも全文読める</li>
+            <li>・週替わりオークションへの参加権</li>
           </ul>
+          <p className="mb-6 text-xs text-paper-600">いつでも、ここでやめられます。</p>
           <button
             onClick={() => startCheckout("subscribe")}
             disabled={loading}
             className="w-full rounded-full bg-gold-500 py-3 text-sm font-bold text-ink-950 disabled:opacity-40"
           >
-            このプランで始める
+            このまま始める
           </button>
         </section>
       ) : (
         <section className="rounded-card border border-ink-700 bg-ink-900/60 p-6">
+          <p className="mb-1 text-xs font-bold text-paper-400">もう少しだけ、話したい日に。</p>
           <p className="mb-4 font-display text-2xl text-paper-50">
-            300円 <span className="text-sm text-paper-400">/ 5回分</span>
+            300円 <span className="text-sm text-paper-400">で、5回分</span>
           </p>
           <p className="mb-6 text-sm text-paper-400">
-            1日の無料分(5回)を使い切ったときに、その場で追加できます。
+            今日の無料分を使い切っても、その場で続けられます。
           </p>
           <button
             onClick={() => startCheckout("credit")}
             disabled={loading}
             className="w-full rounded-full bg-gold-500 py-3 text-sm font-bold text-ink-950 disabled:opacity-40"
           >
-            クレジットを追加する
+            続きを聞く
           </button>
         </section>
       )}

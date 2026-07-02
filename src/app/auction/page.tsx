@@ -23,6 +23,7 @@ export default function AuctionPage() {
   const [bidInputs, setBidInputs] = useState<Record<string, string>>({});
   const [pending, setPending] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const fetchTickets = useCallback(async () => {
     const res = await fetch("/api/auction");
@@ -44,6 +45,7 @@ export default function AuctionPage() {
     }
     setPending(ticket.id);
     setErrorMsg(null);
+    setSuccessMsg(null);
     try {
       const res = await fetch("/api/billing/auction/bid", {
         method: "POST",
@@ -53,6 +55,8 @@ export default function AuctionPage() {
       const data = await res.json();
       if (!res.ok) {
         setErrorMsg(data.message ?? "入札できませんでした。最新価格を確認してください。");
+      } else {
+        setSuccessMsg("入札を受け取りました。ここからの流れは、そっと見守っていてくださいね。");
       }
       await fetchTickets();
     } finally {
@@ -63,8 +67,8 @@ export default function AuctionPage() {
   return (
     <div className="flex flex-col gap-5 px-5 pt-4">
       <div>
-        <h1 className="font-display text-lg text-torii-500">週替わりオークション</h1>
-        <p className="mt-1 text-xs text-paper-400">個人面談占いチケット。24時間限定・最高額入札者が落札します。</p>
+        <h1 className="font-display text-lg text-torii-500">週にいちど、ツクヨミと直接話せる時間。</h1>
+        <p className="mt-1 text-xs text-paper-400">1つの面談枠を、24時間の入札でお分けしています。</p>
       </div>
 
       {tickets.length === 0 && <p className="text-sm text-paper-400">現在開催中のオークションはありません。</p>}
@@ -75,7 +79,7 @@ export default function AuctionPage() {
           <p className="mt-1 text-xs text-paper-400">{ticket.description}</p>
 
           <div className="mt-4 flex items-baseline justify-between">
-            <span className="text-xs text-paper-400">現在価格</span>
+            <span className="text-xs text-paper-400">今の入札額</span>
             <span className="font-display text-2xl text-gold-400">{ticket.currentPriceJpy.toLocaleString()}円</span>
           </div>
           <p className="mt-1 text-right text-[11px] text-paper-600">{ticket._count.bids}件の入札</p>
@@ -103,6 +107,7 @@ export default function AuctionPage() {
       ))}
 
       {errorMsg && <p className="text-center text-xs text-torii-500">{errorMsg}</p>}
+      {successMsg && <p className="text-center text-xs text-gold-400">{successMsg}</p>}
     </div>
   );
 }
