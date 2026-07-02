@@ -10,11 +10,19 @@ import { requireUserId, AuthRequiredError } from "@/lib/auth";
  * データレイヤー設計書⑫で明記した通り、同時入札の競合は
  * AuctionTicket.version による楽観ロックで検知する。
  *
+ * 実施形式(CEO2確定, 2026-07-03): 公式LINE電話・1時間・対応者はCEO本人。
+ * 開催日は固定(決め打ち)で、ユーザーは「その日の枠」に入札する。
+ *
+ * 入札ルール(CEO2確定): 現在の最高額 + 100円以上からのみ受け付ける
+ * (1円刻みでの入札は不可。旧仕様から変更)。
+ *
  * 実装方針(WBS CL10のリスク注記に対応):
  * - リアルタイム性はコスト優先でポーリング方式(フロント側で数秒間隔でGET)を前提とする
  * - Stripeの与信保留(Manual Capture)は本APIでは未実装。TODOとして明記し、
  *   Phase1では「入札=仮予約」までとし、決済確定は落札確定後の別バッチに委ねる設計にしている
  */
+
+const MIN_BID_INCREMENT_JPY = 100;
 
 const bidSchema = z.object({
   ticketId: z.string().uuid(),
@@ -44,9 +52,15 @@ export async function POST(req: NextRequest) {
   if (ticket.status !== "open" || new Date() > ticket.closesAt) {
     return NextResponse.json({ error: "AUCTION_CLOSED" }, { status: 409 });
   }
-  if (amountJpy <= ticket.currentPriceJpy) {
+  const minimumAcceptableJpy = ticket.currentPriceJpy + MIN_BID_INCREMENT_JPY;
+  if (amountJpy < minimumAcceptableJpy) {
     return NextResponse.json(
-      { error: "BID_TOO_LOW", currentPriceJpy: ticket.currentPriceJpy },
+      {
+        error: "BID_TOO_LOW",
+        message: `現在の最高額より${MIN_BID_INCREMENT_JPY}円以上高い金額を入力してください`,
+        currentPriceJpy: ticket.currentPriceJpy,
+        minimumAcceptableJpy,
+      },
       { status: 409 }
     );
   }

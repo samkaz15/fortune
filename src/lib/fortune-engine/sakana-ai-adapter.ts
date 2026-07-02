@@ -64,20 +64,42 @@ export async function callSakanaAI(req: SakanaAIRequest): Promise<SakanaAIRespon
   };
 }
 
-/** APIキー未設定時の開発用モック。占術ロジックの結果とネクストアクションテンプレート(GPT4)を反映する。 */
+/** APIキー未設定時の開発用モック。占術ロジックの結果とネクストアクションテンプレート(GPT4→v2.0)を反映する。 */
 function mockSakanaAIResponse(req: SakanaAIRequest): SakanaAIResponse {
-  const wave = Math.round((req.signals.shichu as { wave?: number } | undefined)?.wave ?? 60);
+  const wave = deriveScore(req.signals);
   const template = pickNextActionTemplate(wave);
 
   return {
     message:
-      "そっか…その気持ち、ちゃんと受け止めましたよ。" +
-      `今のあなたは${template.heading}。無理をしなくても大丈夫。` +
-      `まずは「${template.actions[0]}」ところから始めてみませんか。`,
-    summary: `今日の総合運は${wave}点。${template.heading}。`,
+      `そっか、話してくれてありがとう。${template.heading}だよ。` +
+      `それって、なりたい自分にちゃんと近づいてるサインなんだ。` +
+      `まずは「${template.actions[0]}」ってところから始めてみようよ。`,
+    summary: `今日の運気は${wave}点。${template.heading}。`,
     nextActions: [template.actions[0], template.actions[1], template.actions[2]],
     overallScore: wave,
   };
+}
+
+/**
+ * CEO1(占術カテゴリ別割当)により、カテゴリによって計算される占術が異なるため、
+ * どの占術が来ても運気スコアとして扱えるようフォールバックチェーンで導出する。
+ */
+function deriveScore(signals: Record<string, unknown>): number {
+  const shichu = signals.shichu as { wave?: number } | null;
+  if (shichu?.wave !== undefined) return Math.round(shichu.wave);
+
+  const sanmei = signals.sanmei as { stabilityScore?: number; entrepreneurialScore?: number } | null;
+  if (sanmei?.stabilityScore !== undefined && sanmei?.entrepreneurialScore !== undefined) {
+    return Math.round((sanmei.stabilityScore + sanmei.entrepreneurialScore) / 2);
+  }
+
+  const seimei = signals.seimei as { score?: number } | null;
+  if (seimei?.score !== undefined) return Math.round(seimei.score);
+
+  const compatibilityScore = signals.compatibilityScore as number | null;
+  if (compatibilityScore !== undefined && compatibilityScore !== null) return Math.round(compatibilityScore);
+
+  return 70;
 }
 
 interface NextActionTemplate {
@@ -98,7 +120,7 @@ let cachedTemplates: Record<"high" | "mid" | "low", NextActionTemplate> | null =
 function loadNextActionTemplates(): Record<"high" | "mid" | "low", NextActionTemplate> {
   if (cachedTemplates) return cachedTemplates;
   try {
-    const filePath = path.join(process.cwd(), "prompts", "content", "next_action_templates.v1.0.json");
+    const filePath = path.join(process.cwd(), "prompts", "content", "next_action_templates.v2.0.json");
     const data = JSON.parse(readFileSync(filePath, "utf-8"));
     cachedTemplates = {
       high: data.byScoreRange.high,

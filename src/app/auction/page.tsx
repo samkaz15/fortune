@@ -39,8 +39,9 @@ export default function AuctionPage() {
 
   async function placeBid(ticket: Ticket) {
     const amount = Number(bidInputs[ticket.id]);
-    if (!amount || amount <= ticket.currentPriceJpy) {
-      setErrorMsg(`${ticket.currentPriceJpy + 1}円以上を入力してください`);
+    const minimumAcceptable = ticket.currentPriceJpy + 100;
+    if (!amount || amount < minimumAcceptable) {
+      setErrorMsg(`${minimumAcceptable.toLocaleString()}円以上を入力してください(100円刻み)`);
       return;
     }
     setPending(ticket.id);
@@ -67,8 +68,10 @@ export default function AuctionPage() {
   return (
     <div className="flex flex-col gap-5 px-5 pt-4">
       <div>
-        <h1 className="font-display text-lg text-torii-500">週にいちど、ツクヨミと直接話せる時間。</h1>
-        <p className="mt-1 text-xs text-paper-400">1つの面談枠を、24時間の入札でお分けしています。</p>
+        <h1 className="font-display text-lg text-torii-500">週にいちど、糸町の少年と直接話せる時間。</h1>
+        <p className="mt-1 text-xs text-paper-400">
+          1つの枠を、24時間の入札でお分けしています。落札特典は公式LINE電話で1時間。
+        </p>
       </div>
 
       {tickets.length === 0 && <p className="text-sm text-paper-400">現在開催中のオークションはありません。</p>}
@@ -89,7 +92,8 @@ export default function AuctionPage() {
             <div className="mt-4 flex gap-2">
               <input
                 type="number"
-                placeholder={`${ticket.currentPriceJpy + 100}円〜`}
+                step={100}
+                placeholder={`${(ticket.currentPriceJpy + 100).toLocaleString()}円〜(100円刻み)`}
                 value={bidInputs[ticket.id] ?? ""}
                 onChange={(e) => setBidInputs((prev) => ({ ...prev, [ticket.id]: e.target.value }))}
                 className="flex-1 rounded-full border border-ink-700 bg-ink-900 px-4 py-2 text-sm text-paper-50 outline-none focus-visible:border-gold-500"

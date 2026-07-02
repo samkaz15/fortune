@@ -8,19 +8,18 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 /**
- * キャラクタープロンプトは GPT3(チャットAIプロンプト・口調設計)の申し送り事項に従い、
- * コードにハードコードせず /prompts/chat/system_prompt.v1.0.md から読み込む。
- * キャラクター「ツクヨミ」の人格・禁止事項・crisis対応方針はこのファイルが正。
- * バージョンを上げる場合は system_prompt.v1.1.md 等を追加し、
- * このファイル名の参照だけを差し替える(A/Bテスト時はPhase2でルーティングを追加する)。
+ * キャラクタープロンプトは /prompts/chat/system_prompt.v2.0.md から読み込む
+ * (コードにハードコードしない方針はGPT3の申し送り通り維持)。
+ * v2.0はCEO_STRAT(2026-07-03)で確定した「糸町の少年」本人キャラクターを反映したもの。
+ * v1.0(ツクヨミ)は不採用。履歴として prompts/chat/ に残している。
  */
 function loadCharacterPrompt(): string {
-  const promptPath = path.join(process.cwd(), "prompts", "chat", "system_prompt.v1.0.md");
+  const promptPath = path.join(process.cwd(), "prompts", "chat", "system_prompt.v2.0.md");
   try {
     return readFileSync(promptPath, "utf-8");
   } catch {
     // ファイルが見つからない実行環境(一部のエッジランタイム等)向けの最終フォールバック
-    return "あなたは占いアプリのAIキャラクター「ツクヨミ」です。共感的に、断定を避けて答えてください。";
+    return "あなたは占いアプリのキャラクター「糸町の少年」です。一人称は「僕」、常にポジティブに、決め打ちで話してください。占術の内訳は開示しないでください。";
   }
 }
 
@@ -50,25 +49,56 @@ export interface FortuneEngineOutput {
   summary: string;
   nextActions: [string, string, string];
   overallScore: number;
-  seimeiScore: SeimeiScore;
-  sanmeiSummary: SanmeiSummary;
-  shichuSummary: ShichuSummary;
-  horoscope: HoroscopeResult;
+  seimeiScore?: SeimeiScore;
+  sanmeiSummary?: SanmeiSummary;
+  shichuSummary?: ShichuSummary;
+  horoscope?: HoroscopeResult;
   compatibilityScore?: number;
 }
 
 /**
- * 4占術(姓名判断/算命学/四柱推命/ホロスコープ)を統合し、
- * Sakana AIへ渡してキャラクターの言葉に変換してもらうメインエントリーポイント。
+ * CEO1(占術統合ロジック監修, 2026-07-03)で確定したカテゴリ別の占術固定割当。
+ * ブレンド方式ではなく、相談カテゴリごとに使用する占術を決め打ちする。
+ * 詳細: docs/design/00_ceo_decisions/CEO1_divination_logic_assignment.md
+ *
+ *   BUSINESS                  → 算命学のみ
+ *   SELF / TODAY               → ホロスコープ + 四柱推命
+ *   RELATIONSHIP / COMPATIBILITY → 姓名判断のみ
+ */
+type DivinationSystem = "seimei" | "sanmei" | "shichu" | "horoscope";
+
+function systemsForCategory(category: ConsultCategory): DivinationSystem[] {
+  switch (category) {
+    case "BUSINESS":
+      return ["sanmei"];
+    case "SELF":
+    case "TODAY":
+      return ["horoscope", "shichu"];
+    case "RELATIONSHIP":
+    case "COMPATIBILITY":
+      return ["seimei"];
+    default:
+      return ["horoscope", "shichu"]; // フォールバック(未知カテゴリはSELF/TODAY相当扱い)
+  }
+}
+
+/**
+ * 相談カテゴリに応じて必要な占術のみを実行し、Sakana AIへ渡して
+ * キャラクターの言葉に変換してもらうメインエントリーポイント。
  * API Route(/api/chat)からはこの関数だけを呼べばよい。
+ *
+ * 全占術を常に計算していた旧実装から、CEO1決定に基づくカテゴリ別ルーティングに変更した
+ * (2026-07-03)。ユーザーへはどの占術を使っているか開示しない方針のため、
+ * このルーティング自体もシステムプロンプト側では言及しない。
  */
 export async function generateFortune(params: GenerateFortuneParams): Promise<FortuneEngineOutput> {
   const { category, profile, partnerProfile, userQuestion, weatherContext } = params;
+  const systems = systemsForCategory(category);
 
-  const seimeiScore = calculateSeimei(profile.familyName, profile.givenName);
-  const sanmeiSummary = calculateSanmei(profile.birthDate);
-  const shichuSummary = calculateShichu(profile.birthDate);
-  const horoscope = calculateHoroscope(profile.birthDate);
+  const seimeiScore = systems.includes("seimei") ? calculateSeimei(profile.familyName, profile.givenName) : undefined;
+  const sanmeiSummary = systems.includes("sanmei") ? calculateSanmei(profile.birthDate) : undefined;
+  const shichuSummary = systems.includes("shichu") ? calculateShichu(profile.birthDate) : undefined;
+  const horoscope = systems.includes("horoscope") ? calculateHoroscope(profile.birthDate) : undefined;
 
   const compatibilityScore =
     category === "COMPATIBILITY" && partnerProfile
@@ -83,11 +113,11 @@ export async function generateFortune(params: GenerateFortuneParams): Promise<Fo
     characterPrompt: CHARACTER_PROMPT,
     userQuestion,
     signals: {
-      seimei: seimeiScore,
-      sanmei: sanmeiSummary,
-      shichu: shichuSummary,
-      horoscope,
-      compatibilityScore,
+      seimei: seimeiScore ?? null,
+      sanmei: sanmeiSummary ?? null,
+      shichu: shichuSummary ?? null,
+      horoscope: horoscope ?? null,
+      compatibilityScore: compatibilityScore ?? null,
       weather: weatherContext ?? null,
     },
   });

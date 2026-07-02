@@ -1,5 +1,12 @@
 # GPT1: キャラクター設定（名前/性格/世界観/口調）
 
+> **⚠️ 2026-07-03 CEO_STRATにより不採用**
+> 本ドキュメントの「ツクヨミ」案はCEOにより不採用となりました。
+> 正式なキャラクター設定は
+> [`CEO_STRAT_character_positioning_approval.md`](../00_ceo_decisions/CEO_STRAT_character_positioning_approval.md)
+> を参照してください（確定キャラクター：糸町の少年本人、カエル、男の子、一人称「僕」）。
+> 本ドキュメントは検討過程の記録として保持しています。
+
 **タスクID**: GPT1
 **担当**: ChatGPT (シミュレーション: Claude)
 **期間**: 2日 (2026/07/06-07)
