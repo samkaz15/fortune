@@ -1,5 +1,14 @@
 # System Architecture & AI Development OS Design
 
+> **⚠️ このドキュメントはv2として全面書き換えされています。**
+> 旧版はPython/FastAPI + SQLAlchemy + Terraform/Kubernetesを前提に書かれていましたが、
+> **実装は一切存在せず、方針が文書化されていただけ**でした。一方Claudeは並行して
+> Next.js(App Router) + Prisma + PostgreSQLで**実際に動くPhase1実装**を完了させています。
+> 「先に動くものがある方を正とする」という判断のもと、本ドキュメントは実装済みの
+> Next.jsフルスタック構成に合わせて書き換えています。旧版の技術方針(FastAPI等)は不採用です。
+> AI Development OSとしての設計思想(複数AIの役割分担・成果物受け渡し・GitHub中心の版管理)は
+> 技術スタックに依存しないため、そのまま引き継いでいます。
+
 ## 目次
 1. [全体アーキテクチャ](#全体アーキテクチャ)
 2. [AI Development OS の設計](#ai-development-osの設計)
@@ -12,35 +21,44 @@
 
 ## 全体アーキテクチャ
 
-### プロダクト層とAI層の分離
+### Next.js フルスタック構成（フロントエンドとバックエンドを1リポジトリに統合）
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                      ユーザーアプリケーション              │
-│  (Web: Next.js / Mobile: Flutter)                       │
+│         Next.js 14 (App Router) + TypeScript             │
+│         Web: レスポンシブ / モバイルファースト              │
 └─────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────┐
-│                      REST API Gateway                    │
-│                  (FastAPI + Uvicorn)                    │
+│              Next.js API Routes (Route Handlers)         │
+│         src/app/api/** — BFFを兼ねるサーバーサイド層        │
 └─────────────────────────────────────────────────────────┘
                           ↓
         ┌─────────┬────────┬──────────┬───────────┐
         ↓         ↓        ↓          ↓           ↓
     ┌────────┐┌────┐┌────────┐┌──────┐┌────────┐
-    │Auth    ││Chat││Divn    ││Pay   ││Notif   │
-    │Service ││Svc ││Engine  ││Svc   ││Svc     │
+    │Auth    ││Chat││Fortune ││Pay   ││Weather ││
+    │(暫定)  ││API ││Engine  ││(x3)  ││API     ││
     └────────┘└────┘└────────┘└──────┘└────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────┐
 │              Data Layer                                 │
-│  PostgreSQL (Primary) | Redis (Cache) | S3 (Files)    │
+│  PostgreSQL(Prisma) | Redis(Upstash) | Stripe(決済)    │
 └─────────────────────────────────────────────────────────┘
 ```
+
+**フロントエンドとバックエンドを分離しなかった理由**：Phase1はソフトローンチ規模であり、
+別サービス化(FastAPI等)による運用コスト(コンテナ管理・サービス間通信・型の二重管理)が
+開発速度に見合わない。Next.js API RoutesはTypeScriptの型をフロントと共有できるため、
+小〜中規模では素直に有利。Phase3(数百万人規模)で特定の処理(占術エンジン・推薦ロジック等)
+だけを別サービスに切り出す判断は妥当だが、それは「先に分割ありき」ではなく負荷実測後に行う。
 
 ---
 
 ## AI Development OS の設計
+
+（この章はPROJECT_CHARTER.mdの構想を踏襲。技術スタック非依存のため変更なし）
 
 ### 概念図
 
@@ -75,463 +93,184 @@
 
 詳細は [AI_ROLE.md](./AI_ROLE.md) を参照。
 
-### ワークフロー: 要件 → 設計 → 実装 → テスト → リリース
+### 実装済みの成果物受け渡し例（Phase1）
 
 ```
-┌─────────────────────────────────┐
-│  1. 要件定義フェーズ              │
-│  [Gemini] 市場調査                │
-│  [ChatGPT] ビジネス要件化          │
-└────────────┬────────────────────┘
-             ↓
-        ┌─────────────────────────────────┐
-        │  GitHub Issue (PRD)              │
-        │  Label: [phase], [feature]      │
-        └────────────┬────────────────────┘
-                     ↓
-        ┌─────────────────────────────────┐
-        │  2. 設計フェーズ                  │
-        │  [Claude] アーキテクチャ設計      │
-        │  [ChatGPT] UI/UX・プロンプト     │
-        └────────────┬────────────────────┘
-                     ↓
-        ┌─────────────────────────────────┐
-        │  GitHub (design branch)          │
-        │  設計ドキュメント・図 commit      │
-        └────────────┬────────────────────┘
-                     ↓
-        ┌─────────────────────────────────┐
-        │  3. 実装フェーズ                  │
-        │  [Claude] コード実装             │
-        │  [ChatGPT] テストデータ生成      │
-        └────────────┬────────────────────┘
-                     ↓
-        ┌─────────────────────────────────┐
-        │  GitHub (feature branch)         │
-        │  実装コード commit                │
-        └────────────┬────────────────────┘
-                     ↓
-        ┌─────────────────────────────────┐
-        │  4. テスト・レビューフェーズ      │
-        │  [Claude] コードレビュー         │
-        │  自動テスト実行                   │
-        │  → PR Create                    │
-        └────────────┬────────────────────┘
-                     ↓
-        ┌─────────────────────────────────┐
-        │  5. リリース準備                  │
-        │  [Claude] デプロイ準備           │
-        │  本番環境へデプロイ               │
-        └────────────┬────────────────────┘
-                     ↓
-                ✅ Released
+[Gemini] GM1〜GM8 競合分析・調査
+    ↓ (docs/design/01_competitive_analysis/)
+[ChatGPT] GPT1 キャラクター設定「ツクヨミ」
+    ↓ (docs/design/02_brand_strategy/GPT1_character_design.md)
+[ChatGPT] GPT3 チャットプロンプト設計
+    ↓ (prompts/chat/GPT3_chat_prompt_design.md → system_prompt.v1.0.md に切り出し)
+[Claude] CL8 占術統合エンジン実装
+    → src/lib/fortune-engine/index.ts が system_prompt.v1.0.md を実行時に読み込む
+[ChatGPT] GPT4 ネクストアクション文言テンプレート
+    ↓ (prompts/content/GPT4_next_action_templates.md → next_action_templates.v1.0.json に構造化)
+[Claude] CL9 占いチャット実装
+    → src/lib/fortune-engine/sakana-ai-adapter.ts のモック応答が同JSONを参照
 ```
+
+この一連の流れが、実際に「ドキュメント成果物 → 実装への取り込み」まで機能した最初の実例。
 
 ---
 
 ## バックエンド・システムアーキテクチャ
 
-### 技術スタック（推奨）
+### 技術スタック（実装済み）
 
 ```
-言語: Python 3.11+
-フレームワーク: FastAPI
-非同期: asyncio + aiohttp
-ORM: SQLAlchemy 2.0
-API Documentation: OpenAPI 3.0 (Swagger)
+言語: TypeScript
+フレームワーク: Next.js 14 (App Router)
+ORM: Prisma 5
+DB: PostgreSQL(Supabase推奨)
+キャッシュ/カウンター: Redis(Upstash推奨)
+決済: Stripe
+バリデーション: Zod
 ```
 
-### 層構造（Layered Architecture）
+### 層構造（実装対応）
 
 ```
-┌──────────────────────────────────────────┐
-│  API Layer (FastAPI Router)               │
-│  - /api/v1/auth                          │
-│  - /api/v1/divination                    │
-│  - /api/v1/chat                          │
-│  - /api/v1/payment                       │
-│  - /api/v1/notification                  │
-└──────────────────────────────────────────┘
-                    ↓
-┌──────────────────────────────────────────┐
-│  Service Layer (Business Logic)          │
-│  - AuthService                           │
-│  - DivinationService                     │
-│  - ChatService                           │
-│  - PaymentService                        │
-│  - NotificationService                   │
-│  - RecommendationService                 │
-└──────────────────────────────────────────┘
-                    ↓
-┌──────────────────────────────────────────┐
-│  AI Integration Layer                    │
-│  - ClaudeClient                          │
-│  - OpenAIClient                          │
-│  - GeminiClient                          │
-│  - SakanaAIClient                        │
-└──────────────────────────────────────────┘
-                    ↓
-┌──────────────────────────────────────────┐
-│  Data Access Layer (Repository Pattern)  │
-│  - UserRepository                        │
-│  - DivinationRepository                  │
-│  - ChatRepository                        │
-│  - PaymentRepository                     │
-└──────────────────────────────────────────┘
-                    ↓
-┌──────────────────────────────────────────┐
-│  Database Layer                          │
-│  - PostgreSQL (Primary)                  │
-│  - Redis (Cache)                         │
-│  - S3 (File Storage)                     │
-└──────────────────────────────────────────┘
+src/app/            画面(Level1〜4) + APIルート(src/app/api/**)
+src/components/      共通UI(Header/BottomNav/ChatWindow/ScoreOrb等)
+src/lib/
+  fortune-engine/    占術統合エンジン(CL8) — 姓名判断/算命学/四柱推命/ホロスコープ
+                     + crisis-detection.ts(安全ガードレール Layer2)
+                     + sakana-ai-adapter.ts(外部AI呼び出し層)
+  db.ts              Prismaクライアント(シングルトン)
+  redis.ts           カウンター・キャッシュ・分散ロック
+  stripe.ts          決済クライアント
+  weather.ts         天気連携(CL12)
+  auth.ts            認証(暫定実装。Supabase Auth移行が残タスク)
+prisma/schema.prisma DB設計(CL7)
+prompts/             AIプロンプトのバージョン管理(GPT3方針に準拠)
 ```
 
-### 主要サービスの責務
+### 主要モジュールの責務（実装対応表）
 
-#### AuthService
-```
-認証・認可・セッション管理
-- ユーザー登録・ログイン
-- JWT トークン管理（Access + Refresh）
-- OAuth2 連携（Google/Apple ログイン）
-```
+| 旧ARCHITECTURE.mdでの呼称 | 実装での対応 |
+|---|---|
+| AuthService | `src/lib/auth.ts` + `src/app/api/auth/*`（暫定Cookie実装。Supabase Auth移行が残タスク） |
+| DivinationService | `src/lib/fortune-engine/`（CL8で実装済み） |
+| ChatService | `src/app/api/chat/route.ts` + `ChatWindow.tsx` |
+| PaymentService | `src/app/api/billing/*` + `src/app/api/billing/webhook`(Stripe Webhook) |
+| NotificationService | 未実装（Phase2 CL17で実装予定） |
+| RecommendationService | 未実装（Phase2 CL19で実装予定、Sakana AI連携強化） |
 
-#### DivinationService
-```
-占術エンジンの統合・実行
-- 四柱推命・算命学・姓名判断の統合
-- 占いスコア計算
-- 毎日の運勢生成（バッチ）
-```
+### API 設計規約（実装での実際の形）
 
-#### ChatService
-```
-AI チャット相談機能
-- OpenAI API 連携
-- コンテキスト管理
-- 応答のトーン制御
-```
-
-#### PaymentService
-```
-課金・決済処理
-- サブスクリプション管理
-- クレジット・追加購入
-- オークション入札処理
-```
-
-#### NotificationService
-```
-プッシュ通知・スケジューリング
-- FCM 連携（Firebase Cloud Messaging）
-- 運気通知・95点通知
-- スケジューリング・時間帯別配信
-```
-
-#### RecommendationService
-```
-推薦ロジック実行
-- Sakana AI との連携
-- ユーザー行動に基づく推薦
-- 匿名データを活用した推薦
-```
-
-### API 設計規約
-
-#### エンドポイント命名規約
-```
-GET    /api/v1/users/{user_id}           # 取得
-POST   /api/v1/divinations              # 作成
-PUT    /api/v1/users/{user_id}          # 更新全体
-PATCH  /api/v1/users/{user_id}          # 部分更新
-DELETE /api/v1/users/{user_id}          # 削除
-```
-
-#### レスポンスフォーマット
-```json
-{
-  "status": "success" | "error",
-  "code": "SUCCESS" | "VALIDATION_ERROR" | ...,
-  "data": {...},
-  "error": {
-    "message": "...",
-    "details": [...]
-  },
-  "pagination": {
-    "total": 100,
-    "page": 1,
-    "per_page": 10
-  }
-}
-```
-
-#### エラーハンドリング
-```python
-class APIException(Exception):
-    """API エラーベースクラス"""
-    status_code: int
-    error_code: str
-    message: str
-
-class ValidationError(APIException):
-    status_code = 400
-    error_code = "VALIDATION_ERROR"
-
-class NotFoundError(APIException):
-    status_code = 404
-    error_code = "NOT_FOUND"
-
-class PaymentError(APIException):
-    status_code = 402
-    error_code = "PAYMENT_FAILED"
-```
+旧版は `/api/v1/...` + `{status, code, data, error, pagination}` の統一レスポンス形式を
+想定していたが、Next.js Route HandlerではフロントエンドとAPIが同一TypeScriptプロジェクト内にあり、
+型を直接共有できるため、**エンベロープを持たない直接JSON返却**を採用している
+（例：`{ sessionId, resultId, message }` を直接返す。エラー時は `{ error: "CODE", message?: string }`）。
+これは意図的な逸脱であり、REST APIとして外部公開する必要が生じた場合(Phase3でモバイルアプリ等が
+増える場合)は、`/api/v1/`プレフィックス+統一エンベロープへの移行を検討する。
 
 ---
 
 ## データベース設計
 
-### 主要エンティティ（ER図簡略版）
+### 実装済みスキーマ（詳細は `prisma/schema.prisma` を参照）
 
-```
-User
-├─ id (PK)
-├─ email
-├─ password_hash
-├─ profile
-├─ created_at
-└─ updated_at
+旧版の簡略ERD（User / Divination / Chat / Payment / Notification の5テーブル）に対し、
+実装では要件が明らかになった時点でより詳細な構造に分割している。対応関係は以下の通り。
 
-↓ (1:N)
-
-Divination
-├─ id (PK)
-├─ user_id (FK)
-├─ type (DAILY / CHARACTER / BUSINESS / COMPATIBILITY)
-├─ input_params (JSON)
-├─ result (JSON)
-├─ score
-├─ created_at
-└─ updated_at
-
-↓ (1:N)
-
-Chat
-├─ id (PK)
-├─ user_id (FK)
-├─ message
-├─ ai_response
-├─ context (JSON)
-├─ created_at
-└─ updated_at
-
-↓ (1:N)
-
-Payment
-├─ id (PK)
-├─ user_id (FK)
-├─ type (SUBSCRIPTION / CREDIT / AUCTION_BID)
-├─ amount
-├─ status
-├─ created_at
-└─ updated_at
-
-Notification
-├─ id (PK)
-├─ user_id (FK)
-├─ type
-├─ message
-├─ sent_at
-└─ read_at
-```
+| 旧ERDのテーブル | 実装での対応 | 分割した理由 |
+|---|---|---|
+| User | `User` + `UserProfile` | PII(氏名・生年月日等)を専用テーブルに隔離し、匿名化・削除要求への対応を容易にするため |
+| Divination | `FortuneSession` + `FortuneMessage` + `FortuneResult` | チャット形式の対話履歴と、確定した診断結果を分離するため |
+| Payment | `Subscription` + `CreditBalance`/`CreditTransaction` + `AuctionTicket`/`Bid` | 3つの課金モデル(サブスク/クレジット/オークション)は整合性要件が異なるため統合しなかった。特にオークションは`version`列による楽観ロックが必要 |
+| Notification | `NotificationSetting` | Phase1は設定のみ。送信履歴テーブルはPhase2の通知高度化(CL17)で追加する |
+| (新規) | `DailyUsage`, `AuditLog` | 利用回数カウンターの整合性チェック用、および監査ログ(追記専用) |
 
 ### スケーラビリティを考慮した設計
 
-#### Phase 1: 単一 PostgreSQL インスタンス
-```
-単一 DB サーバー
-├─ Primary (読み書き)
-└─ Replica (読み取りのみ)
-```
+Phase1〜2は単一PostgreSQLインスタンス(Read Replica任意)で問題ない規模。
+Phase3(数百万人規模)での水平分割(シャーディング)は、`userId`をシャードキーとする方針を維持する
+(旧ARCHITECTURE.mdの方針を踏襲)。ただし実装はPhase3着手時に行う。
 
-#### Phase 3: 水平分割（Sharding）
-```
-Sharded Database
-├─ Shard 0 (user_id hash % 10 = 0)
-├─ Shard 1 (user_id hash % 10 = 1)
-├─ ...
-└─ Shard 9 (user_id hash % 10 = 9)
+### キャッシング戦略（実装対応）
 
-シャードキー: user_id
 ```
-
-#### キャッシング戦略
-```
-Redis (In-Memory)
-├─ User Session (TTL: 24h)
-├─ Divination Result (TTL: 1h)
-├─ Leaderboard (TTL: 15min)
-└─ Feature Flags (TTL: 5min)
+Redis (Upstash)
+├─ 利用回数カウンター(1日5回)    TTL: 26時間（日付またぎのバッファ込み）
+├─ 生成中の二重送信防止ロック     TTL: 30秒
+├─ 天気情報                     TTL: 3時間
+└─ (Phase2以降) ランキング・APIレスポンスキャッシュ
 ```
 
 ---
 
 ## インフラストラクチャ
 
-### クラウド構成（AWS/GCP）
+### 推奨構成（Phase1〜2）
+
+旧版はAWS/GCP + Terraform + Docker/Kubernetesを前提にしていたが、Phase1〜2の規模では
+過剰投資になるため、サーバーレス・マネージドサービス中心の構成を推奨する。
 
 ```
-┌─────────────────────────────────────────┐
-│  Internet                               │
-└────────────┬────────────────────────────┘
-             ↓
-┌─────────────────────────────────────────┐
-│  CloudFront / CDN                       │
-│  (静的資源キャッシュ)                    │
-└────────────┬────────────────────────────┘
-             ↓
-┌─────────────────────────────────────────┐
-│  Load Balancer (ALB / Cloud Load Bal.)  │
-└────────┬──────────────┬──────────┬──────┘
-         ↓              ↓          ↓
-    ┌───────────┐  ┌───────────┐  ┌───────────┐
-    │  Container │  │Container  │  │Container  │
-    │ (FastAPI)  │  │(FastAPI)  │  │(FastAPI)  │
-    └───────────┘  └───────────┘  └───────────┘
-         ↓              ↓          ↓
-┌─────────────────────────────────────────┐
-│  RDS PostgreSQL (Primary)               │
-│  + Read Replicas                        │
-└─────────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────────┐
-│  ElastiCache / Redis                    │
-│  (Session / Cache Store)                │
-└─────────────────────────────────────────┘
-         ↓
-┌─────────────────────────────────────────┐
-│  S3 / Cloud Storage                     │
-│  (ユーザーデータ / ログ)                 │
-└─────────────────────────────────────────┘
+Next.js アプリ         → Vercel（デプロイ・CDN・自動スケールを一括提供）
+PostgreSQL            → Supabase（マネージド、Auth機能も将来利用可）
+Redis                 → Upstash（サーバーレス従量課金、Vercelとの相性が良い）
+決済                   → Stripe
 ```
 
-### IaC（Infrastructure as Code）
+### Phase3以降で検討する構成
+
+数百万人規模に達した段階で、以下への移行を検討する(旧ARCHITECTURE.mdの構想を踏襲)。
 
 ```
-terraform/
-├─ main.tf              # VPC・セキュリティグループ
-├─ rds.tf              # データベース
-├─ elasticache.tf      # Redis
-├─ ecs.tf              # コンテナ管理
-├─ alb.tf              # ロードバランサー
-├─ s3.tf               # ストレージ
-└─ variables.tf        # 環境変数
+- コンテナ化・Kubernetes導入（特定の重い処理を切り出す場合）
+- Terraformによるインフラのコード化
+- マルチリージョン展開
+- 読み取り専用レプリカの追加、または水平分割(シャーディング)
 ```
 
-### CI/CD パイプライン
-
-```
-GitHub Push
-   ↓
-[1] Lint + Format Check
-   ├─ Ruff (Python linter)
-   ├─ Black (Formatter)
-   └─ mypy (Type checker)
-   ↓
-[2] Unit Tests
-   ├─ Pytest
-   └─ Coverage > 80%
-   ↓
-[3] Integration Tests
-   ├─ Docker Compose で DB 立ち上げ
-   └─ API テスト
-   ↓
-[4] Security Scan
-   ├─ SAST (Bandit)
-   └─ Dependency Check
-   ↓
-[5] Build Docker Image
-   └─ ECR へ Push
-   ↓
-[6] Deploy to Staging
-   └─ Terraform Apply
-   ↓
-[7] Smoke Tests (Staging)
-   └─ E2E テスト
-   ↓
-[Optional] Deploy to Production
-   └─ Manual Approval
-```
+「先に大きなインフラを組む」のではなく、**実測に基づいて必要になった箇所から段階的に移行する**
+方針は旧版から変更していない。
 
 ---
 
 ## セキュリティ・スケーラビリティ
 
-### セキュリティ方針
+### 認証・認可
 
-#### 認証・認可
-```
-JWT (JSON Web Token)
-├─ Access Token (15分)
-├─ Refresh Token (7日)
-└─ Role-Based Access Control (RBAC)
-```
+Phase1時点では簡易Cookie認証（`src/lib/auth.ts`）。本番投入前に **Supabase Auth** への
+移行が必須（JWTベースのアクセストークン/リフレッシュトークン運用は旧版の方針を踏襲する）。
 
-#### データ暗号化
+### データ暗号化
+
 ```
-転送中: TLS 1.3
-保存時: AES-256 (暗号化カラム)
-個人情報: トークン化 / ハッシュ化
+転送中: TLS（Vercel/Supabase双方で標準対応）
+保存時: Supabase側のディスク暗号化 + 機微カラムの追加暗号化を検討(Phase2)
+個人情報: UserProfile テーブルへの隔離により、アクセス経路を限定
 ```
 
-#### API セキュリティ
+### API セキュリティ（実装状況）
+
 ```
-レート制限: 1000 req/min per IP
-CORS: 指定ドメインのみ
-CSRF: Double Submit Cookie
-SQL Injection: Parameterized Queries (SQLAlchemy)
-XSS: Content Security Policy (CSP)
+入力バリデーション: Zod（実装済み・全APIルートで使用）
+決済の整合性: Stripe Webhook経由でのみ確定(クライアントの成功コールバックを信用しない)
+オークション同時実行制御: 楽観ロック(version列)で実装済み
+レート制限: 未実装(Phase2で追加。Vercel/Upstashのレート制限機能を利用予定)
 ```
 
-### スケーラビリティ方針
+### 負荷テスト目標（旧版の方針を踏襲）
 
-#### 水平スケーリング
-```
-コンテナ数: 負荷に応じて自動スケール (HPA)
-最小: 3 インスタンス
-最大: 100 インスタンス
-```
-
-#### キャッシング戦略
-```
-L1: Browser Cache (1時間)
-L2: CDN Cache (CloudFront)
-L3: Application Cache (Redis)
-L4: Database (PostgreSQL)
-```
-
-#### 負荷テスト目標
 ```
 Phase 1: 1,000 同時接続
 Phase 2: 10,000 同時接続
 Phase 3: 100,000+ 同時接続
 ```
 
-#### パフォーマンス目標
-```
-API レスポンスタイム: < 500ms (p95)
-ページロード時間: < 2秒 (Web)
-占い生成時間: < 3秒
-チャット応答時間: < 5秒
-```
-
 ---
 
 ## 参考資料
 
-- API 仕様詳細: `/docs/technical/api_spec.yaml`
-- DB 設計詳細: `/docs/design/database_design.md`
-- インフラ詳細: `/infrastructure/`
+- 実装コード: `src/`
+- DB設計詳細: `prisma/schema.prisma`
+- プロンプト: `prompts/`
 - AI 連携: [AI_ROLE.md](./AI_ROLE.md)
+- 実装ノート(Claude作業ログ): `docs/claude_impl_notes/`
 
-**最終更新**: 2026-07-02
+**最終更新**: 2026-07-02（Next.js実装完了を反映した全面改訂）

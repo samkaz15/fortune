@@ -1,0 +1,69 @@
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/db";
+import { getCurrentUserId } from "@/lib/auth";
+import { ScoreOrb } from "@/components/ScoreOrb";
+import { ShareButtons } from "@/components/ShareButtons";
+
+/**
+ * 画面遷移設計書「診断結果(ロック中/解放済み)」の実装。
+ * 未ログインでも閲覧可能にし(IA設計書⑥のバイラル設計方針)、
+ * 全文は isUnlocked のときのみ表示する。
+ */
+export default async function ResultPage({ params }: { params: { id: string } }) {
+  const result = await prisma.fortuneResult.findUnique({ where: { id: params.id } });
+  if (!result) notFound();
+
+  const viewerId = await getCurrentUserId();
+  let isUnlocked = result.isUnlocked;
+  if (viewerId === result.userId && !isUnlocked) {
+    const sub = await prisma.subscription.findUnique({ where: { userId: result.userId } });
+    isUnlocked = sub?.status === "active";
+  }
+
+  const nextActions = (result.nextActions as string[]) ?? [];
+
+  return (
+    <div className="flex flex-col gap-6 px-5 pt-4">
+      <div className="flex flex-col items-center gap-3">
+        {result.scoreOverall !== null && <ScoreOrb score={result.scoreOverall} />}
+        <p className="text-center text-sm leading-relaxed text-paper-200">{result.summary}</p>
+      </div>
+
+      <section className="rounded-card border border-ink-700 bg-ink-900/50 p-5">
+        <h2 className="mb-3 font-display text-sm text-gold-400">ネクストアクション</h2>
+        <ul className="space-y-2">
+          {nextActions.map((action, i) => (
+            <li key={i} className="flex gap-2 text-sm leading-relaxed text-paper-100">
+              <span className="text-gold-500">{i + 1}.</span>
+              <span>{action}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {isUnlocked ? (
+        <>
+          <section className="rounded-card border border-ink-700 bg-ink-900/50 p-5">
+            <h2 className="mb-3 font-display text-sm text-gold-400">くわしい結果</h2>
+            <p className="whitespace-pre-line text-sm leading-relaxed text-paper-100">{result.bodyText}</p>
+          </section>
+          <ShareButtons resultId={result.id} />
+        </>
+      ) : (
+        <div className="relative rounded-card border border-gold-500/40 bg-ink-900/70 p-5">
+          <div className="pointer-events-none select-none blur-sm">
+            <p className="text-sm leading-relaxed text-paper-400">
+              ここから先には、あなたの流れをもっと深く読み解いた内容が続きます…
+            </p>
+          </div>
+          <a
+            href="/plans"
+            className="absolute inset-x-4 bottom-4 rounded-full bg-gold-500 py-3 text-center text-sm font-bold text-ink-950"
+          >
+            続きを見る
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}

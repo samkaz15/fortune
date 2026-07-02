@@ -1,0 +1,250 @@
+// ============================================================
+// 糸町の少年 — Prisma Schema (CL7: DB設計)
+//
+// 設計方針（データレイヤー設計書に準拠）:
+// - PII（氏名/生年月日/性別/出生時間）は UserProfile に隔離し、
+//   User（認証用）とは1:1で分離する。将来の匿名化・削除要求に対応しやすくするため。
+// - 利用回数カウンター(1日5回)は本来Redisのアトミックカウンターが最適だが、
+//   Postgres単独運用でも動くよう DailyUsage テーブルも用意している(CL3参照)。
+//   本番ではRedisを正とし、このテーブルは日次バッチでの整合性チェック用に使う想定。
+// - オークション入札(Bid)は楽観ロック(Ticket.version)で同時入札の競合を制御する。
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------- 認証・ユーザー ----------------
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String?
+  authProvider  String   @default("email") // email | google | apple 等
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime? // 退会時は論理削除→90日後にバッチで物理削除(データレイヤー設計書⑧)
+
+  profile       UserProfile?
+  subscription  Subscription?
+  creditBalance CreditBalance?
+  sessions      FortuneSession[]
+  results       FortuneResult[]
+  bids          Bid[]
+  notifications NotificationSetting?
+  dailyUsages   DailyUsage[]
+
+  @@map("users")
+}
+
+/// PIIを隔離する専用テーブル。Data Access Layerでも専用Repository経由のみアクセス許可する運用にする。
+model UserProfile {
+  userId      String   @id
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String // 姓名判断に使用
+  birthDate   DateTime // 四柱推命・算命学・ホロスコープに使用
+  birthTime   String? // 出生時間（任意、HH:mm）。四柱推命の精度向上に使う
+  gender      String? // male | female | other | unspecified
+  displayName String? // 表示用ニックネーム（非PII寄り。マイページ等で表示）
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("user_profiles")
+}
+
+// ---------------- 占いチャット・結果 ----------------
+
+enum ConsultCategory {
+  RELATIONSHIP // 人間関係
+  SELF // 自分のこと
+  BUSINESS // ビジネス
+  COMPATIBILITY // 相性(相手情報が必要)
+  TODAY // 今日の占い(TOPから直接)
+}
+
+model FortuneSession {
+  id         String          @id @default(uuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   ConsultCategory
+  status     String          @default("in_progress") // in_progress | completed | abandoned
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  messages FortuneMessage[]
+  result   FortuneResult?
+
+  @@index([userId, createdAt])
+  @@map("fortune_sessions")
+}
+
+model FortuneMessage {
+  id        String         @id @default(uuid())
+  sessionId String
+  session   FortuneSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      String // user | assistant
+  content   String
+  createdAt DateTime       @default(now())
+
+  @@index([sessionId, createdAt])
+  @@map("fortune_messages")
+}
+
+/// AI生成データ(診断結果)本体。本文が長い場合はObject Storageへの参照(bodyUrl)に切り替える設計(データレイヤー設計書⑫参照)。
+model FortuneResult {
+  id            String         @id @default(uuid())
+  sessionId     String         @unique
+  session       FortuneSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  summary       String // 無料開放される要約
+  bodyText      String? // 全文（短ければ直接格納）
+  bodyUrl       String? // 全文が長い場合はObject Storageのキー/URL
+
+  nextActions   Json // ["行動1","行動2","行動3"] 形式。PC2行/モバイル5行制約はUI側で担保
+  scoreOverall  Int? // 0-100。95点以上通知(Phase2)のトリガーに使う
+  isUnlocked    Boolean        @default(false) // 課金 or サブスクで解放済みか
+
+  seimeiScore   Json? // 姓名判断の画数スコア内訳
+  sanmeiSummary Json? // 算命学の判定内容(社会性/起業適性等)
+  shichuSummary Json? // 四柱推命の判定内容
+  horoscope     Json? // ホロスコープの判定内容
+
+  weatherContext Json? // 天気(低気圧等)連携時のコンテキスト(CL12)
+
+  createdAt     DateTime       @default(now())
+
+  @@index([userId, createdAt])
+  @@map("fortune_results")
+}
+
+// ---------------- 利用回数カウンター ----------------
+
+/// 「1日5回まで無料」のカウンター。正はRedis(アトミックカウンター)、
+/// これは日次バッチ整合性チェック・分析用の記録テーブル。
+model DailyUsage {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usageDate DateTime @db.Date
+  count     Int      @default(0)
+
+  @@unique([userId, usageDate])
+  @@map("daily_usages")
+}
+
+// ---------------- 課金：サブスク ----------------
+
+model Subscription {
+  id                   String    @id @default(uuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status               String    @default("inactive") // inactive | active | paused | canceled
+  planPriceJpy         Int       @default(500) // 初月500円→2ヶ月目以降980円はStripe Price側で管理
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  currentPeriodEnd     DateTime?
+  canceledAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@map("subscriptions")
+}
+
+// ---------------- 課金：追加クレジット ----------------
+
+model CreditBalance {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance   Int      @default(0) // 5回分＝1クレジットパックとして管理(300円/5回)
+  updatedAt DateTime @updatedAt
+
+  transactions CreditTransaction[]
+
+  @@map("credit_balances")
+}
+
+model CreditTransaction {
+  id              String        @id @default(uuid())
+  userId          String
+  balance         CreditBalance @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  type            String // purchase | consume | refund
+  amount          Int // purchase:+5 consume:-1 等
+  priceJpy        Int? // purchase時のみ(300円)
+  stripePaymentId String?
+  createdAt       DateTime      @default(now())
+
+  @@index([userId, createdAt])
+  @@map("credit_transactions")
+}
+
+// ---------------- 課金：オークション面談チケット ----------------
+
+model AuctionTicket {
+  id            String   @id @default(uuid())
+  title         String // 例:「7月第2週 個人面談占い」
+  description   String
+  startPriceJpy Int      @default(1000)
+  currentPriceJpy Int    @default(1000)
+  status        String   @default("scheduled") // scheduled | open | closed | fulfilled
+  opensAt       DateTime
+  closesAt      DateTime // opensAtの24時間後を基本とする
+  winningBidId  String?  @unique
+  version       Int      @default(0) // 楽観ロック用。入札時にversionをインクリメントし競合を検知する
+
+  bids Bid[]
+
+  @@index([status, closesAt])
+  @@map("auction_tickets")
+}
+
+model Bid {
+  id           String        @id @default(uuid())
+  ticketId     String
+  ticket       AuctionTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amountJpy    Int
+  status       String        @default("active") // active | outbid | won | refunded
+  stripeHoldId String? // 与信保留のID(決済確定は落札後)
+  createdAt    DateTime      @default(now())
+
+  @@index([ticketId, amountJpy])
+  @@map("bids")
+}
+
+// ---------------- 通知 ----------------
+
+model NotificationSetting {
+  userId          String   @id
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pushEnabled     Boolean  @default(true)
+  scoreThreshold  Int      @default(95) // 95点以上通知(Phase2)のしきい値。将来ユーザー設定可能にする
+  updatedAt       DateTime @updatedAt
+
+  @@map("notification_settings")
+}
+
+// ---------------- 監査ログ（追記専用） ----------------
+
+/// PIIアクセス・決済操作・管理者操作を記録する追記専用テーブル(データレイヤー設計書⑨)。
+/// アプリケーションコードからUPDATE/DELETEは行わない運用にする。
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorType  String // user | admin | system
+  actorId    String?
+  action     String // 例: "pii_read", "payment_charge", "admin_update_ticket"
+  targetType String?
+  targetId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}

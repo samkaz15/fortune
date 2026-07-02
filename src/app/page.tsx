@@ -1,0 +1,70 @@
+import Link from "next/link";
+import { ScoreOrb } from "@/components/ScoreOrb";
+
+/**
+ * 画面遷移設計書「TOP(ホーム)」の実装。
+ * オンボーディング画面は作らず、Hero内のコピーだけでコンセプトを伝える設計方針(WBS判断済み)。
+ * 実データ(今日の運気スコア/最新結果)は認証実装後にサーバーコンポーネントでfetchする形に差し替える。
+ * 現状はログイン前でも迷わない導線を優先し、静的なプレースホルダーで構成している。
+ */
+export default function TopPage() {
+  return (
+    <div className="flex flex-col gap-8 px-5">
+      <section className="flex flex-col items-center gap-4 pt-4 text-center">
+        <p className="font-display text-sm tracking-[0.3em] text-gold-500">ITOMACHI NO SHONEN</p>
+        <h1 className="font-display text-3xl leading-snug text-paper-50">
+          大丈夫。
+          <br />
+          必ずうまくいく。
+        </h1>
+        <p className="max-w-[26ch] text-sm leading-relaxed text-paper-400">
+          生年月日と名前から、今日のあなたに必要な3つの行動を届けます。
+        </p>
+      </section>
+
+      <section className="flex flex-col items-center gap-4 rounded-card border border-ink-700 bg-ink-900/60 px-6 py-8 shadow-lantern">
+        <ScoreOrb score={72} size={140} />
+        <p className="text-center text-sm text-paper-200">
+          今日は「流れに乗る」日。
+          <br />
+          焦らなくても大丈夫。
+        </p>
+        <Link
+          href="/consult?category=TODAY"
+          className="w-full rounded-full bg-gold-500 py-3 text-center font-bold text-ink-950 transition active:scale-[0.98]"
+        >
+          今日の占いを見る
+        </Link>
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="font-display text-base text-paper-200">相談する</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <ConsultShortcut href="/consult?category=RELATIONSHIP" label="人間関係" />
+          <ConsultShortcut href="/consult?category=SELF" label="自分のこと" />
+          <ConsultShortcut href="/consult?category=BUSINESS" label="ビジネス" />
+          <ConsultShortcut href="/consult?category=COMPATIBILITY" label="相性" />
+        </div>
+      </section>
+
+      <section className="rounded-card border border-torii-500/30 bg-ink-900/40 px-5 py-4">
+        <h2 className="mb-2 font-display text-sm text-torii-500">週替わりオークション</h2>
+        <p className="text-sm text-paper-400">個人面談占いチケットを1000円から入札できます。</p>
+        <Link href="/auction" className="mt-3 inline-block text-sm font-bold text-gold-400 underline">
+          オークションを見る →
+        </Link>
+      </section>
+    </div>
+  );
+}
+
+function ConsultShortcut({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center justify-center rounded-card border border-ink-700 bg-ink-900/50 py-5 text-sm text-paper-200 transition active:scale-[0.98]"
+    >
+      {label}
+    </Link>
+  );
+}
