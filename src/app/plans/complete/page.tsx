@@ -1,13 +1,24 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 /**
  * 画面遷移設計書の判断：決済完了を独立した「見せるだけの画面」にせず、
  * 最小限のサンクス表示のみでマイページへ自動遷移させる(UX改善提案②の実装反映)。
+ *
+ * useSearchParams()はNext.jsの仕様によりSuspense境界内で呼ぶ必要があるため、
+ * 内部コンポーネントに分離している(CL13結合テストで検出したビルドエラーの修正)。
  */
 export default function PlanCompletePage() {
+  return (
+    <Suspense fallback={null}>
+      <PlanCompleteInner />
+    </Suspense>
+  );
+}
+
+function PlanCompleteInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const type = searchParams.get("type");

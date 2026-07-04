@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ScoreOrb } from "@/components/ScoreOrb";
+import { PopularRanking } from "@/components/PopularRanking";
 
 /**
  * 画面遷移設計書「TOP(ホーム)」の実装。
@@ -47,11 +48,21 @@ export default function TopPage() {
         </div>
       </section>
 
+      <PopularRanking />
+
       <section className="rounded-card border border-torii-500/30 bg-ink-900/40 px-5 py-4">
         <h2 className="mb-2 font-display text-sm text-torii-500">週替わりオークション</h2>
         <p className="text-sm text-paper-400">個人面談占いチケットを1000円から入札できます。</p>
         <Link href="/auction" className="mt-3 inline-block text-sm font-bold text-gold-400 underline">
           オークションを見る →
+        </Link>
+      </section>
+
+      <section className="rounded-card border border-ink-700 bg-ink-900/40 px-5 py-4">
+        <h2 className="mb-2 font-display text-sm text-paper-200">運気カレンダー</h2>
+        <p className="text-sm text-paper-400">1ヶ月分の運気の波と、今月やるべきことをまとめて確認できます。</p>
+        <Link href="/calendar" className="mt-3 inline-block text-sm font-bold text-gold-400 underline">
+          カレンダーを見る →
         </Link>
       </section>
     </div>

@@ -1,22 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Shippori_Mincho, Zen_Kaku_Gothic_New } from "next/font/google";
 import "./globals.css";
 import { BottomNav } from "@/components/BottomNav";
 import { Header } from "@/components/Header";
 
-const shippori = Shippori_Mincho({
-  subsets: ["latin"],
-  weight: ["500", "600", "800"],
-  variable: "--font-shippori",
-  display: "swap",
-});
-
-const zenkaku = Zen_Kaku_Gothic_New({
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-  variable: "--font-zenkaku",
-  display: "swap",
-});
+/**
+ * フォントについて:
+ * 当初 next/font/google (Shippori Mincho / Zen Kaku Gothic New) を使用していたが、
+ * ビルド時にGoogle Fontsへ到達できない環境(オフラインCI等)でビルドが失敗するため、
+ * globals.css の @import + font-family フォールバックチェーン方式に変更した。
+ * オンライン環境ではGoogle Fontsが読み込まれ、オフラインではシステムフォントで表示される。
+ */
 
 export const metadata: Metadata = {
   title: "糸町の少年 | 大丈夫。必ずうまくいく。",
@@ -36,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja" className={`${shippori.variable} ${zenkaku.variable}`}>
+    <html lang="ja">
       <body className="bg-lantern-gradient min-h-dvh font-body text-paper-50 antialiased">
         <Header />
         <main className="mx-auto min-h-dvh max-w-md pb-24 pt-14">

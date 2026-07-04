@@ -5,11 +5,87 @@ import { Redis } from "@upstash/redis";
  * - 1日5回までの利用回数カウンター → アトミックインクリメント
  * - AI生成中の重複リクエスト防止 → 分散ロック(Idempotency Key)
  * - 診断結果・ランキング等のキャッシュ
+ *
+ * UPSTASH_REDIS_REST_URL 未設定の環境(ローカル開発・CI)では、
+ * インメモリ実装に自動フォールバックする。単一プロセス内でのみ有効なため、
+ * 本番では必ずUpstashを設定すること(複数インスタンス間で共有されないと
+ * カウンター・分散ロックの意味がなくなる)。
  */
-export const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL ?? "",
-  token: process.env.UPSTASH_REDIS_REST_TOKEN ?? "",
-});
+
+interface RedisLike {
+  incr(key: string): Promise<number>;
+  expire(key: string, seconds: number): Promise<unknown>;
+  get<T>(key: string): Promise<T | null>;
+  set(key: string, value: unknown, opts?: { nx?: boolean; ex?: number }): Promise<string | null>;
+  del(key: string): Promise<unknown>;
+}
+
+class InMemoryRedis implements RedisLike {
+  private store = new Map<string, { value: unknown; expiresAt: number | null }>();
+
+  private isExpired(entry: { expiresAt: number | null }): boolean {
+    return entry.expiresAt !== null && Date.now() > entry.expiresAt;
+  }
+
+  private cleanGet(key: string) {
+    const entry = this.store.get(key);
+    if (!entry) return undefined;
+    if (this.isExpired(entry)) {
+      this.store.delete(key);
+      return undefined;
+    }
+    return entry;
+  }
+
+  async incr(key: string): Promise<number> {
+    const entry = this.cleanGet(key);
+    const current = typeof entry?.value === "number" ? entry.value : Number(entry?.value ?? 0);
+    const next = current + 1;
+    this.store.set(key, { value: next, expiresAt: entry?.expiresAt ?? null });
+    return next;
+  }
+
+  async expire(key: string, seconds: number): Promise<number> {
+    const entry = this.cleanGet(key);
+    if (!entry) return 0;
+    entry.expiresAt = Date.now() + seconds * 1000;
+    return 1;
+  }
+
+  async get<T>(key: string): Promise<T | null> {
+    const entry = this.cleanGet(key);
+    return (entry?.value as T) ?? null;
+  }
+
+  async set(key: string, value: unknown, opts?: { nx?: boolean; ex?: number }): Promise<string | null> {
+    if (opts?.nx && this.cleanGet(key)) return null;
+    this.store.set(key, {
+      value,
+      expiresAt: opts?.ex ? Date.now() + opts.ex * 1000 : null,
+    });
+    return "OK";
+  }
+
+  async del(key: string): Promise<number> {
+    return this.store.delete(key) ? 1 : 0;
+  }
+}
+
+function createRedis(): RedisLike {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (url && token) {
+    return new Redis({ url, token }) as unknown as RedisLike;
+  }
+  if (process.env.NODE_ENV === "production") {
+    console.warn(
+      "[redis] UPSTASH_REDIS_REST_URL is not set in production. Falling back to in-memory store — counters and locks will NOT be shared across instances."
+    );
+  }
+  return new InMemoryRedis();
+}
+
+export const redis: RedisLike = createRedis();
 
 const DAILY_FREE_LIMIT = 5;
 
@@ -20,8 +96,7 @@ function todayKey(userId: string) {
 
 /**
  * 無料利用回数を1消費する。上限に達している場合は false を返す。
- * カテゴリ別ではなく「質問単位で合算5回」という現行仕様の理解で実装している
- * (要件定義CL4でカテゴリ別に分ける仕様に変わった場合はキー設計を category 込みに変更する)。
+ * カウント粒度は「質問単位で合算5回」(CL4要件参照)。
  */
 export async function consumeDailyFreeQuota(userId: string): Promise<{
   allowed: boolean;

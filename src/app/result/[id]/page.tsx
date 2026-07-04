@@ -1,16 +1,22 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/auth";
 import { ScoreOrb } from "@/components/ScoreOrb";
 import { ShareButtons } from "@/components/ShareButtons";
+import { recommendNextCategory } from "@/lib/recommendation";
 
 /**
  * 画面遷移設計書「診断結果(ロック中/解放済み)」の実装。
  * 未ログインでも閲覧可能にし(IA設計書⑥のバイラル設計方針)、
  * 全文は isUnlocked のときのみ表示する。
+ * CL19: 末尾に「次のおすすめ診断」(匿名集計ベースの推薦)を表示する。
  */
 export default async function ResultPage({ params }: { params: { id: string } }) {
-  const result = await prisma.fortuneResult.findUnique({ where: { id: params.id } });
+  const result = await prisma.fortuneResult.findUnique({
+    where: { id: params.id },
+    include: { session: { select: { category: true } } },
+  });
   if (!result) notFound();
 
   const viewerId = await getCurrentUserId();
@@ -21,6 +27,7 @@ export default async function ResultPage({ params }: { params: { id: string } })
   }
 
   const nextActions = (result.nextActions as string[]) ?? [];
+  const recommendation = await recommendNextCategory(result.session.category);
 
   return (
     <div className="flex flex-col gap-6 px-5 pt-4">
@@ -65,6 +72,14 @@ export default async function ResultPage({ params }: { params: { id: string } })
           </a>
         </div>
       )}
+
+      <Link
+        href={`/consult?category=${recommendation.category}`}
+        className="rounded-card border border-ink-700 bg-ink-900/40 p-4"
+      >
+        <p className="mb-1 text-xs text-paper-600">あわせて見られている診断</p>
+        <p className="text-sm font-bold text-gold-400">「{recommendation.label}」も占ってみる →</p>
+      </Link>
     </div>
   );
 }

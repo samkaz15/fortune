@@ -1,9 +1,14 @@
+@import url("https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: dark;
+  --font-shippori: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-zenkaku: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  --font-mono: ui-monospace, monospace;
 }
 
 html,

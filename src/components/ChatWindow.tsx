@@ -26,11 +26,21 @@ interface ChatMessage {
   content: string;
 }
 
+interface PartnerInfo {
+  familyName: string;
+  givenName: string;
+  birthDate: string;
+}
+
 /**
  * 画面遷移設計書「診断入力フォーム」に相当する部分を、5診断メニューに分割せず
  * 1つのチャットUIに統合したもの(WBS改訂の中核判断)。
  * category が未確定の場合は、最初にAIが「どの相談?」と聞く導線をカード選択で代替している
  * (毎回タイプさせるよりタップで選ばせた方が離脱ポイント分析⑦の知見に合う)。
+ *
+ * CL15(Phase2): COMPATIBILITY選択時のみ、チャット送信の前に相手情報(姓名+生年月日)を
+ * 収集するステップを挟む。API側は元々partnerフィールドを受け付けていたが、
+ * Phase1時点ではUIから送る手段がなかったため、ここで初めて機能として完結させている。
  */
 export function ChatWindow({ initialCategory }: { initialCategory: Category | null }) {
   const router = useRouter();
@@ -40,20 +50,39 @@ export function ChatWindow({ initialCategory }: { initialCategory: Category | nu
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [errorCta, setErrorCta] = useState<null | { message: string; href: string; label: string }>(null);
+  const [partner, setPartner] = useState<PartnerInfo | null>(null);
+  const [partnerFormOpen, setPartnerFormOpen] = useState(false);
+  const [partnerDraft, setPartnerDraft] = useState<PartnerInfo>({ familyName: "", givenName: "", birthDate: "" });
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (category) {
       setMessages([{ role: "assistant", content: CATEGORY_PROMPT[category] }]);
+      setPartnerFormOpen(category === "COMPATIBILITY");
     }
   }, [category]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+  }, [messages, loading, partnerFormOpen]);
+
+  function submitPartnerForm() {
+    if (!partnerDraft.familyName || !partnerDraft.givenName || !partnerDraft.birthDate) return;
+    setPartner(partnerDraft);
+    setPartnerFormOpen(false);
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: `相手：${partnerDraft.familyName}${partnerDraft.givenName}さん（${partnerDraft.birthDate}生まれ）` },
+      { role: "assistant", content: "ありがとう。それじゃあ、2人の関係で気になっていることを教えて。" },
+    ]);
+  }
 
   async function handleSend() {
     if (!input.trim() || !category || loading) return;
+    if (category === "COMPATIBILITY" && !partner) {
+      setPartnerFormOpen(true);
+      return;
+    }
     const userMessage = input.trim();
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
     setInput("");
@@ -64,7 +93,12 @@ export function ChatWindow({ initialCategory }: { initialCategory: Category | nu
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, category, message: userMessage }),
+        body: JSON.stringify({
+          sessionId,
+          category,
+          message: userMessage,
+          partner: category === "COMPATIBILITY" && partner ? partner : undefined,
+        }),
       });
       const data = await res.json();
 
@@ -135,6 +169,40 @@ export function ChatWindow({ initialCategory }: { initialCategory: Category | nu
         {messages.map((m, i) => (
           <ChatBubble key={i} role={m.role} content={m.content} />
         ))}
+
+        {partnerFormOpen && (
+          <div className="rounded-card border border-gold-500/40 bg-ink-900/70 p-4 text-sm text-paper-200">
+            <p className="mb-3 font-bold text-gold-400">相手の情報を教えて</p>
+            <div className="mb-2 grid grid-cols-2 gap-2">
+              <input
+                placeholder="姓"
+                value={partnerDraft.familyName}
+                onChange={(e) => setPartnerDraft((p) => ({ ...p, familyName: e.target.value }))}
+                className="rounded-full border border-ink-700 bg-ink-900 px-3 py-2 text-xs text-paper-50 outline-none focus-visible:border-gold-500"
+              />
+              <input
+                placeholder="名"
+                value={partnerDraft.givenName}
+                onChange={(e) => setPartnerDraft((p) => ({ ...p, givenName: e.target.value }))}
+                className="rounded-full border border-ink-700 bg-ink-900 px-3 py-2 text-xs text-paper-50 outline-none focus-visible:border-gold-500"
+              />
+            </div>
+            <input
+              type="date"
+              value={partnerDraft.birthDate}
+              onChange={(e) => setPartnerDraft((p) => ({ ...p, birthDate: e.target.value }))}
+              className="mb-3 w-full rounded-full border border-ink-700 bg-ink-900 px-3 py-2 text-xs text-paper-50 outline-none focus-visible:border-gold-500"
+            />
+            <button
+              onClick={submitPartnerForm}
+              disabled={!partnerDraft.familyName || !partnerDraft.givenName || !partnerDraft.birthDate}
+              className="w-full rounded-full bg-gold-500 py-2 text-xs font-bold text-ink-950 disabled:opacity-40"
+            >
+              次へ
+            </button>
+          </div>
+        )}
+
         {loading && <ChatBubble role="assistant" content="占ってるところ…" pending />}
         {errorCta && (
           <div className="rounded-card border border-gold-500/40 bg-ink-900/70 p-4 text-sm text-paper-200">
@@ -155,12 +223,13 @@ export function ChatWindow({ initialCategory }: { initialCategory: Category | nu
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          placeholder="メッセージを入力"
-          className="flex-1 rounded-full border border-ink-700 bg-ink-900 px-4 py-3 text-sm text-paper-50 outline-none focus-visible:border-gold-500"
+          disabled={partnerFormOpen}
+          placeholder={partnerFormOpen ? "先に相手の情報を入力してね" : "メッセージを入力"}
+          className="flex-1 rounded-full border border-ink-700 bg-ink-900 px-4 py-3 text-sm text-paper-50 outline-none focus-visible:border-gold-500 disabled:opacity-40"
         />
         <button
           onClick={handleSend}
-          disabled={loading || !input.trim()}
+          disabled={loading || !input.trim() || partnerFormOpen}
           className="rounded-full bg-gold-500 px-4 py-3 text-sm font-bold text-ink-950 disabled:opacity-40"
         >
           送る

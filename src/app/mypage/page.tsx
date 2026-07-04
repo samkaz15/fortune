@@ -13,10 +13,11 @@ export default async function MyPage() {
   const userId = await getCurrentUserId();
   if (!userId) redirect("/auth/login");
 
-  const [profile, subscription, creditBalance, remainingFree, recentResults] = await Promise.all([
+  const [profile, subscription, creditBalance, pointBalance, remainingFree, recentResults] = await Promise.all([
     prisma.userProfile.findUnique({ where: { userId } }),
     prisma.subscription.findUnique({ where: { userId } }),
     prisma.creditBalance.findUnique({ where: { userId } }),
+    prisma.pointBalance.findUnique({ where: { userId } }),
     getRemainingDailyFreeQuota(userId),
     prisma.fortuneResult.findMany({
       where: { userId },
@@ -40,10 +41,18 @@ export default async function MyPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-3">
-        <StatCard label="本日の残り回数" value={subscription?.status === "active" ? "使い放題" : `${remainingFree}回`} />
-        <StatCard label="クレジット残高" value={`${creditBalance?.balance ?? 0}回分`} />
+      <section className="grid grid-cols-3 gap-2">
+        <StatCard label="本日の残り" value={subscription?.status === "active" ? "∞" : `${remainingFree}回`} />
+        <StatCard label="ポイント" value={`${pointBalance?.balance ?? 0}`} />
+        <StatCard label="クレジット" value={`${creditBalance?.balance ?? 0}`} />
       </section>
+
+      <Link
+        href="/mypage/invite"
+        className="rounded-card border border-torii-500/40 bg-ink-900/40 px-4 py-3 text-center text-sm font-bold text-torii-500"
+      >
+        友達を招待してポイントをもらう
+      </Link>
 
       <Link
         href="/plans"

@@ -3,7 +3,7 @@ import { calculateShichu, ShichuSummary } from "./shichu";
 import { calculateSanmei, SanmeiSummary } from "./sanmei";
 import { calculateHoroscope, HoroscopeResult } from "./horoscope";
 import { callSakanaAI } from "./sakana-ai-adapter";
-import type { ConsultCategory } from "@prisma/client";
+import type { ConsultCategory } from "@/generated/prisma/enums";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 

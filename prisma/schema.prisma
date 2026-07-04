@@ -11,12 +11,12 @@
 // ============================================================
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // ---------------- 認証・ユーザー ----------------
@@ -30,6 +30,10 @@ model User {
   updatedAt     DateTime @updatedAt
   deletedAt     DateTime? // 退会時は論理削除→90日後にバッチで物理削除(データレイヤー設計書⑧)
 
+  referralCode     String?  @unique // CL20: 自分の招待コード(初回ログイン時に発行)
+  referredByUserId String?  // CL20: 誰の招待で登録したか(あれば)
+  lineUserId       String?  @unique // CL22: LINE連携完了後のLINE User ID(未連携はnull)
+
   profile       UserProfile?
   subscription  Subscription?
   creditBalance CreditBalance?
@@ -38,6 +42,8 @@ model User {
   bids          Bid[]
   notifications NotificationSetting?
   dailyUsages   DailyUsage[]
+  pointBalance  PointBalance?
+  shrineReviews ShrineReview[]
 
   @@map("users")
 }
@@ -226,9 +232,26 @@ model NotificationSetting {
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   pushEnabled     Boolean  @default(true)
   scoreThreshold  Int      @default(95) // 95点以上通知(Phase2)のしきい値。将来ユーザー設定可能にする
+  pushSubscription Json?   // Web Push API の PushSubscription(endpoint/keys)。CL22 LINE連携とは別チャネル
   updatedAt       DateTime @updatedAt
 
   @@map("notification_settings")
+}
+
+/// CL17: 通知の送信実績ログ。「送ったつもり」を防ぐため、評価結果は成否・スコアともに必ず記録する。
+model NotificationLog {
+  id         String   @id @default(uuid())
+  userId     String
+  type       String // score_threshold(95点通知) | daily_reminder(運気通知) 等
+  score      Int?
+  channel    String // web_push | line(Phase2, LINE連携完了後) | none(送信手段未設定でスキップ)
+  status     String // sent | skipped_no_channel | skipped_below_threshold | failed
+  message    String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+  @@map("notification_logs")
 }
 
 // ---------------- 監査ログ（追記専用） ----------------
@@ -247,4 +270,68 @@ model AuditLog {
 
   @@index([action, createdAt])
   @@map("audit_logs")
+}
+
+// ---------------- CL20: 紹介制度・ポイント制度 ----------------
+
+/// ポイント経済の設計方針(暫定): 1ポイント=1回分の質問クレジットと等価で運用する。
+/// 実際の付与量・還元レートはCEOの事業判断が必要(要確認: docs/design/00_ceo_decisions/ 未確定)。
+model PointBalance {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  transactions PointTransaction[]
+
+  @@map("point_balances")
+}
+
+model PointTransaction {
+  id        String       @id @default(uuid())
+  userId    String
+  balance   PointBalance @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  type      String // referral_reward | redeem | admin_grant
+  amount    Int // 付与は+、消費は-
+  reason    String? // 例: "友達招待(referredUserId=...)"
+  createdAt DateTime     @default(now())
+
+  @@index([userId, createdAt])
+  @@map("point_transactions")
+}
+
+// ---------------- CL18: おすすめ神社・神社レビュー ----------------
+
+model Shrine {
+  id            String   @id @default(uuid())
+  name          String
+  prefecture    String
+  city          String
+  tags          Json // ["恋愛","金運","仕事運"] 等の悩みタグ(IA設計書⑤のタグ設計に準拠)
+  generalInfo   String // 一般情報(住所・由緒等、参拝前に配信する内容)
+  latitude      Float?
+  longitude     Float?
+  createdAt     DateTime @default(now())
+
+  reviews ShrineReview[]
+
+  @@map("shrines")
+}
+
+/// プロジェクト概要の運用フロー通り:
+/// 一般情報 → CEO実参拝 → レビュー追加 → (Phase3で)AI反映 → ユーザーへ配信
+model ShrineReview {
+  id          String   @id @default(uuid())
+  shrineId    String
+  shrine      Shrine   @relation(fields: [shrineId], references: [id], onDelete: Cascade)
+  authorType  String   @default("ceo") // ceo(CEO本人の参拝レビュー) | ai(Phase3で自動反映する場合)
+  authorUserId String?
+  author      User?    @relation(fields: [authorUserId], references: [id])
+  visitedAt   DateTime?
+  // GPT8の5ブロック構成に対応するJSON( block1〜block5 )
+  blocks      Json
+  createdAt   DateTime @default(now())
+
+  @@index([shrineId, createdAt])
+  @@map("shrine_reviews")
 }

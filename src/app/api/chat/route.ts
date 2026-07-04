@@ -75,24 +75,36 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // ---- 1. 利用回数 / クレジットの判定 ----
+  // ---- 1. 利用回数 / ポイント / クレジットの判定 ----
+  // 消費順序: 無料枠(1日5回) → ポイント(紹介報酬等) → 追加クレジット(有料)
+  // 有償で購入したクレジットを最後に温存するのがユーザーにとって最も損のない順序のため。
   const quota = await consumeDailyFreeQuota(userId);
   let usedCredit = false;
+  let usedPoint = false;
   if (!quota.allowed) {
-    const creditBalance = await prisma.creditBalance.findUnique({ where: { userId } });
-    if (!creditBalance || creditBalance.balance <= 0) {
-      return NextResponse.json(
-        { error: "QUOTA_EXCEEDED", message: "本日の無料分を使い切りました。追加クレジットをご利用ください。" },
-        { status: 402 }
-      );
+    const pointBalance = await prisma.pointBalance.findUnique({ where: { userId } });
+    if (pointBalance && pointBalance.balance > 0) {
+      await prisma.$transaction([
+        prisma.pointBalance.update({ where: { userId }, data: { balance: { decrement: 1 } } }),
+        prisma.pointTransaction.create({ data: { userId, type: "redeem", amount: -1, reason: "質問1回に使用" } }),
+      ]);
+      usedPoint = true;
+    } else {
+      const creditBalance = await prisma.creditBalance.findUnique({ where: { userId } });
+      if (!creditBalance || creditBalance.balance <= 0) {
+        return NextResponse.json(
+          { error: "QUOTA_EXCEEDED", message: "本日の無料分を使い切りました。追加クレジットをご利用ください。" },
+          { status: 402 }
+        );
+      }
+      await prisma.$transaction([
+        prisma.creditBalance.update({ where: { userId }, data: { balance: { decrement: 1 } } }),
+        prisma.creditTransaction.create({
+          data: { userId, type: "consume", amount: -1 },
+        }),
+      ]);
+      usedCredit = true;
     }
-    await prisma.$transaction([
-      prisma.creditBalance.update({ where: { userId }, data: { balance: { decrement: 1 } } }),
-      prisma.creditTransaction.create({
-        data: { userId, type: "consume", amount: -1 },
-      }),
-    ]);
-    usedCredit = true;
   }
 
   // ---- 2. プロフィール(PII)取得。未登録なら先に登録を促す ----
@@ -177,6 +189,7 @@ export async function POST(req: NextRequest) {
       resultId: fortuneResult.id,
       message: result.message,
       usedCredit,
+      usedPoint,
       remainingFreeQuota: quota.remaining,
     });
   } finally {
