@@ -93,42 +93,32 @@ export default function NotificationSettingsPage() {
   );
 }
 
+/**
+ * CL22(簡略版): LINE連携は自前のOAuth/Webhook実装ではなく、
+ * 外部の公式LINEアカウントへ <a href> で誘導するだけの方式に変更(2026-07-03決定)。
+ * LINE Developersでのチャネル開設が不要になり、実装コストがゼロに近い。
+ * 面談チケット(CEO2)の案内も同じ公式LINEアカウントに一本化される。
+ */
 function LineLinkSection() {
-  const [linkCode, setLinkCode] = useState<string | null>(null);
-  const [issuing, setIssuing] = useState(false);
-
-  async function issueCode() {
-    setIssuing(true);
-    try {
-      const res = await fetch("/api/line/link", { method: "POST" });
-      if (res.ok) {
-        const d = await res.json();
-        setLinkCode(d.linkCode);
-      }
-    } finally {
-      setIssuing(false);
-    }
-  }
+  const lineUrl = process.env.NEXT_PUBLIC_LINE_OFFICIAL_URL;
 
   return (
     <div className="rounded-card border border-ink-700 bg-ink-900/40 p-4">
-      <p className="mb-1 text-sm text-paper-200">LINE連携</p>
+      <p className="mb-1 text-sm text-paper-200">公式LINE</p>
       <p className="mb-3 text-xs text-paper-600">
-        公式LINEと連携すると、運気のいい日の通知をLINEでも受け取れます。
+        友だち追加すると、運気のいい日のお知らせや面談の案内もLINEで受け取れます。
       </p>
-      {linkCode ? (
-        <div className="text-center">
-          <p className="mb-1 text-xs text-paper-400">公式LINEのトークにこのコードを送ってね(10分有効)</p>
-          <p className="font-display text-2xl tracking-[0.3em] text-gold-400">{linkCode}</p>
-        </div>
-      ) : (
-        <button
-          onClick={issueCode}
-          disabled={issuing}
-          className="w-full rounded-full border border-gold-500/50 py-2.5 text-xs font-bold text-gold-400 disabled:opacity-40"
+      {lineUrl ? (
+        <a
+          href={lineUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block w-full rounded-full border border-gold-500/50 py-2.5 text-center text-xs font-bold text-gold-400"
         >
-          連携コードを発行する
-        </button>
+          公式LINEを友だち追加する
+        </a>
+      ) : (
+        <p className="text-center text-xs text-paper-600">(公式LINEのURLは準備中です)</p>
       )}
     </div>
   );
