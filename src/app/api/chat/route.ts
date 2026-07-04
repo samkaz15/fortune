@@ -7,6 +7,17 @@ import { acquireGenerationLock, releaseGenerationLock } from "@/lib/redis";
 import { generateFortune } from "@/lib/fortune-engine";
 import { getWeatherContext } from "@/lib/weather";
 import { detectCrisis, crisisResponseMessage } from "@/lib/fortune-engine/crisis-detection";
+import { createKnowledgeEntry } from "@/lib/decision-report/knowledge";
+
+/** shichuのadvice文から運勢タグを1語抽出(decision-report/index.tsと同じマッピング) */
+function extractTagFromAdvice(advice: string): string {
+  if (advice.includes("行動力")) return "決断";
+  if (advice.includes("育てる")) return "継続";
+  if (advice.includes("足元")) return "準備";
+  if (advice.includes("判断力")) return "決断";
+  if (advice.includes("柔軟")) return "つながり";
+  return "流れ";
+}
 
 /**
  * POST /api/chat
@@ -183,6 +194,24 @@ export async function POST(req: NextRequest) {
     });
 
     await prisma.fortuneSession.update({ where: { id: session.id }, data: { status: "completed" } });
+
+    // RAG知識ベースへの構造化保存(CEO_UPDATE「会話ログの活用」)。
+    // 失敗しても占い本体のレスポンスは止めない(ベストエフォート)。
+    try {
+      await createKnowledgeEntry({
+        userId,
+        sessionId: session.id,
+        category,
+        firstUserMessage: message,
+        fortuneKeyword: result.shichuSummary?.advice
+          ? extractTagFromAdvice(result.shichuSummary.advice)
+          : "流れ",
+        advice: result.message,
+        nextAction: result.nextActions[0] ?? "",
+      });
+    } catch (e) {
+      console.warn("[knowledge] entry creation failed", e);
+    }
 
     return NextResponse.json({
       sessionId: session.id,

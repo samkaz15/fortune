@@ -335,3 +335,42 @@ model ShrineReview {
   @@index([shrineId, createdAt])
   @@map("shrine_reviews")
 }
+
+// ---------------- 意思決定レポート (CEO_UPDATE 2026-07-03) ----------------
+
+/// 「今日の意思決定レポート」。1ユーザー1日1件。スコアはルールベースで確定し、AIは変更しない。
+model DailyReport {
+  id             String   @id @default(uuid())
+  userId         String
+  reportDate     DateTime @db.Date
+  score          Int
+  stars          Int
+  keywords       Json // {userTheme, environment, fortune}
+  summary        String
+  cautions       Json // [string, string, string]
+  advice         String
+  todayAction    String
+  scoreBreakdown Json // {base, envModifier, themeBonus} 監査・スコアリング改善用
+  generatedBy    String   @default("llm") // llm | fallback
+  createdAt      DateTime @default(now())
+
+  @@unique([userId, reportDate])
+  @@map("daily_reports")
+}
+
+/// RAG知識ベース。会話ログの生テキストではなく構造化サマリを保存する(仕様書「会話ログの活用」準拠)。
+model KnowledgeEntry {
+  id                String          @id @default(uuid())
+  userId            String
+  sessionId         String          @unique
+  category          ConsultCategory
+  userConcern       String
+  divinationSummary String
+  finalAdvice       String
+  nextAction        String
+  tags              Json // string[]
+  createdAt         DateTime        @default(now())
+
+  @@index([userId, createdAt])
+  @@map("knowledge_entries")
+}

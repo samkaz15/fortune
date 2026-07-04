@@ -10,7 +10,7 @@ rm -f $JAR
 
 echo "===== 0. テストデータのクリーンアップ ====="
 PGPASSWORD=itomachi_dev psql -h 127.0.0.1 -U itomachi -d itomachi -q -c \
-  "TRUNCATE users, user_profiles, fortune_sessions, fortune_messages, fortune_results, daily_usages, subscriptions, credit_balances, credit_transactions, auction_tickets, bids, notification_settings, audit_logs RESTART IDENTITY CASCADE;" > /dev/null
+  "TRUNCATE users, user_profiles, fortune_sessions, fortune_messages, fortune_results, daily_usages, subscriptions, credit_balances, credit_transactions, auction_tickets, bids, notification_settings, notification_logs, audit_logs, point_balances, point_transactions, shrines, shrine_reviews, daily_reports, knowledge_entries RESTART IDENTITY CASCADE;" > /dev/null
 echo "  (DBを初期化しました)"
 
 check() {  # $1=テスト名 $2=期待値 $3=実際値
@@ -222,16 +222,64 @@ check "GET /api/ranking" "200" "$code"
 has_rank=$(python3 -c "import json; d=json.load(open('/tmp/rank.json')); print(len(d['popularRanking']) >= 1)")
 check "人気診断ランキングにデータあり" "True" "$has_rank"
 
-echo "===== P2-9. LINE連携(CL22) ====="
-code=$(curl -s -b $JAR2 -o /tmp/line.json -w "%{http_code}" -X POST "$BASE/api/line/link")
-check "連携コード発行" "200" "$code"
-is_6digit=$(python3 -c "import json,re; print(bool(re.fullmatch(r'\d{6}', json.load(open('/tmp/line.json'))['linkCode'])))")
-check "コードが6桁数字" "True" "$is_6digit"
-# channel secret未設定のwebhookは503(誤処理防止)
-code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/api/line/webhook" -d '{}')
-check "LINE webhook 未設定→503" "503" "$code"
+echo "===== P2-9. LINE誘導(CL22簡略版) ====="
+# 自前連携APIは廃止(外部公式LINEへのhrefリンク誘導のみ)。API routeが存在しないことを確認
+code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/api/line/link")
+check "旧連携API廃止済み→404" "404" "$code"
+code=$(curl -s -b $JAR2 -o /dev/null -w "%{http_code}" "$BASE/mypage/notifications")
+check "通知設定画面(LINE誘導リンク含む)表示" "200" "$code"
 
 echo ""
 echo "=============================================="
 echo "TOTAL RESULT: PASS=$PASS FAIL=$FAIL"
+echo "=============================================="
+
+# ==========================================================
+# 意思決定レポート (CEO_UPDATE 2026-07-03) テスト
+# ==========================================================
+echo ""
+echo "########## 意思決定レポート テスト ##########"
+
+echo "===== R-1. 認証・前提条件 ====="
+code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/report/today")
+check "未ログイン→401" "401" "$code"
+
+echo "===== R-2. レポート生成(6項目フォーマット) ====="
+code=$(curl -s -b $JAR2 -o /tmp/report.json -w "%{http_code}" "$BASE/api/report/today")
+check "GET /api/report/today" "200" "$code"
+python3 - <<'PYEOF' > /tmp/report_checks.txt
+import json
+r = json.load(open('/tmp/report.json'))
+print("score_valid", 5 <= r['score'] <= 100)
+print("stars_valid", 1 <= r['stars'] <= 5)
+print("keywords_3", all(k in r['keywords'] for k in ('userTheme','environment','fortune')))
+print("cautions_3", len(r['cautions']) == 3)
+print("summary_len", 100 <= len(r['summary']) <= 300)
+print("action_single", bool(r['todayAction']))
+import re
+banned = re.search(r'低気圧|高気圧|気圧|hPa', json.dumps(r, ensure_ascii=False))
+print("no_weather_terms", banned is None)
+PYEOF
+while read name result; do
+  check "レポート: $name" "True" "$result"
+done < /tmp/report_checks.txt
+
+echo "===== R-3. 同日2回目はキャッシュ返却(スコア不変) ====="
+score1=$(python3 -c "import json; print(json.load(open('/tmp/report.json'))['score'])")
+curl -s -b $JAR2 -o /tmp/report2.json "$BASE/api/report/today"
+score2=$(python3 -c "import json; print(json.load(open('/tmp/report2.json'))['score'])")
+check "2回目のスコアが同一(決定論+キャッシュ)" "$score1" "$score2"
+count=$(PGPASSWORD=itomachi_dev psql -h 127.0.0.1 -U itomachi -d itomachi -t -A -c \
+  "SELECT COUNT(*) FROM daily_reports;")
+check "DBに1件のみ保存(二重生成なし)" "1" "$count"
+
+echo "===== R-4. RAG知識ベース(会話ログの構造化) ====="
+ke_count=$(PGPASSWORD=itomachi_dev psql -h 127.0.0.1 -U itomachi -d itomachi -t -A -c \
+  "SELECT COUNT(*) FROM knowledge_entries;")
+ke_ok=$(python3 -c "print(int('$ke_count') >= 1)")
+check "チャット完了時にKnowledgeEntryが生成されている" "True" "$ke_ok"
+
+echo ""
+echo "=============================================="
+echo "FINAL RESULT: PASS=$PASS FAIL=$FAIL"
 echo "=============================================="

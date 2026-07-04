@@ -19,7 +19,7 @@ export default function TopPage() {
           必ずうまくいく。
         </h1>
         <p className="max-w-[26ch] text-sm leading-relaxed text-paper-400">
-          生年月日と名前から、今日のあなたに必要な3つの行動を届けます。
+          生年月日と名前、そして毎日の対話から。今日どう動けばいいかを、迷わず決められるレポートを届けます。
         </p>
       </section>
 
@@ -31,10 +31,10 @@ export default function TopPage() {
           焦らなくても大丈夫。
         </p>
         <Link
-          href="/consult?category=TODAY"
+          href="/report"
           className="w-full rounded-full bg-gold-500 py-3 text-center font-bold text-ink-950 transition active:scale-[0.98]"
         >
-          今日の占いを見る
+          今日の意思決定レポートを見る
         </Link>
       </section>
 
