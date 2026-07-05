@@ -3,6 +3,7 @@ import { calculateShichu, ShichuSummary } from "./shichu";
 import { calculateSanmei, SanmeiSummary } from "./sanmei";
 import { calculateHoroscope, HoroscopeResult } from "./horoscope";
 import { callSakanaAI } from "./sakana-ai-adapter";
+import { interpretDayStem, fiveElementAdjustment, ENGINE_WEIGHTS } from "./interpretation-dictionary";
 import type { ConsultCategory } from "@/generated/prisma/enums";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -15,7 +16,7 @@ import path from "node:path";
  * v2.0(スタイル統合前)・v1.0(ツクヨミ・不採用)は履歴として prompts/chat/ に残している。
  */
 function loadCharacterPrompt(): string {
-  const promptPath = path.join(process.cwd(), "prompts", "chat", "system_prompt.v2.3.md");
+  const promptPath = path.join(process.cwd(), "prompts", "chat", "system_prompt.v2.4.md");
   try {
     return readFileSync(promptPath, "utf-8");
   } catch {
@@ -123,6 +124,15 @@ export async function generateFortune(params: GenerateFortuneParams): Promise<Fo
       compatibilityScore: compatibilityScore ?? null,
       weather: weatherContext ?? null,
       extraContext: extraContext ?? null,
+      // 解釈層(Core Mapping Spec): 計算層の干支を「状態→行動」に変換した辞書値。
+      // LLMはこの辞書の語彙で話す(向き/不向きの断定はしない)。重みは非公開の内部値。
+      interpretation: shichuSummary
+        ? {
+            dayStem: interpretDayStem(shichuSummary.dayStem),
+            elementAdjustment: fiveElementAdjustment[shichuSummary.element] ?? null,
+            weights: ENGINE_WEIGHTS,
+          }
+        : null,
     },
   });
 
