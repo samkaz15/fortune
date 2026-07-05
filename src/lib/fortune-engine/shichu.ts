@@ -9,8 +9,8 @@
  *   本格的な暦計算ライブラリ(または専用API)に差し替えることを推奨する。
  */
 
-const JIKKAN = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"] as const;
-const JUNISHI = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"] as const;
+export const JIKKAN = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"] as const;
+export const JUNISHI = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"] as const;
 
 const GOGYO_OF_JIKKAN: Record<(typeof JIKKAN)[number], "木" | "火" | "土" | "金" | "水"> = {
   甲: "木", 乙: "木", 丙: "火", 丁: "火", 戊: "土", 己: "土",
@@ -30,7 +30,7 @@ export interface ShichuSummary {
 const EPOCH = Date.UTC(1984, 1, 2);
 const MS_PER_DAY = 86_400_000;
 
-function stemBranchIndexFromDate(date: Date): number {
+export function stemBranchIndexFromDate(date: Date): number {
   const diffDays = Math.floor((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - EPOCH) / MS_PER_DAY);
   return ((diffDays % 60) + 60) % 60;
 }
