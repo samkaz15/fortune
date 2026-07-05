@@ -96,6 +96,22 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return;
   }
 
+  // トークション落札決済(仕様書§決済: 決済成功→即時ステータス反映→予約へ)
+  if (session.mode === "payment" && session.metadata?.kind === "auction_win") {
+    const ticketId = session.metadata?.ticketId;
+    if (ticketId) {
+      await prisma.auctionTicket.updateMany({
+        where: { id: ticketId, winnerUserId: userId, status: { in: ["awaiting_payment", "pending_bank"] } },
+        data: { status: "paid" },
+      });
+      await prisma.auditLog.create({
+        data: { actorType: "system", action: "auction_paid", targetType: "auction_ticket", targetId: ticketId, metadata: { userId, sessionId: session.id } },
+      });
+      trackEvent("payment_succeeded", { kind: "auction_win" }, userId);
+    }
+    return;
+  }
+
   if (session.mode === "payment" && session.metadata?.kind === "credit_pack") {
     const paymentIntentId =
       typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id;

@@ -88,24 +88,46 @@ code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/auction")
 check "GET /api/auction 一覧" "200" "$code"
 
 # 100円未満の刻みで入札→拒否されるはず
-code=$(curl -s -b $JAR -o /tmp/bid_low.json -w "%{http_code}" -X POST "$BASE/api/billing/auction/bid" \
-  -H "Content-Type: application/json" \
-  -d "{\"ticketId\":\"$TICKET_ID\",\"amountJpy\":1050,\"expectedVersion\":0}")
-check "入札1050円(刻み不足)→409" "409" "$code"
-
-# 100円以上の刻み→成功
-code=$(curl -s -b $JAR -o /tmp/bid_ok.json -w "%{http_code}" -X POST "$BASE/api/billing/auction/bid" \
+code=$(curl -s -b $JAR -o /dev/null -w "%{http_code}" -X POST "$BASE/api/billing/auction/bid" \
   -H "Content-Type: application/json" \
   -d "{\"ticketId\":\"$TICKET_ID\",\"amountJpy\":1100,\"expectedVersion\":0}")
-check "入札1100円→200" "200" "$code"
+check "同意チェックなしの入札→400(サーバー側検証)" "400" "$code"
+
+# 現在価格(1000円)未満→BID_TOO_LOW
+code=$(curl -s -b $JAR -o /dev/null -w "%{http_code}" -X POST "$BASE/api/billing/auction/bid" \
+  -H "Content-Type: application/json" \
+  -d "{\"ticketId\":\"$TICKET_ID\",\"amountJpy\":900,\"expectedVersion\":0,\"agreedNoCancel\":true,\"agreedDisclaimer\":true}")
+check "現在価格未満の入札→409" "409" "$code"
+
+# 現在価格以上(トークション仕様: +100円刻みは廃止)→成功
+code=$(curl -s -b $JAR -o /tmp/bid_ok.json -w "%{http_code}" -X POST "$BASE/api/billing/auction/bid" \
+  -H "Content-Type: application/json" \
+  -d "{\"ticketId\":\"$TICKET_ID\",\"amountJpy\":1100,\"expectedVersion\":0,\"agreedNoCancel\":true,\"agreedDisclaimer\":true}")
+check "入札1100円(同意あり)→200" "200" "$code"
 
 # 古いversionで入札→楽観ロック競合として拒否
 code=$(curl -s -b $JAR -o /tmp/bid_conflict.json -w "%{http_code}" -X POST "$BASE/api/billing/auction/bid" \
   -H "Content-Type: application/json" \
-  -d "{\"ticketId\":\"$TICKET_ID\",\"amountJpy\":1300,\"expectedVersion\":0}")
+  -d "{\"ticketId\":\"$TICKET_ID\",\"amountJpy\":1300,\"expectedVersion\":0,\"agreedNoCancel\":true,\"agreedDisclaimer\":true}")
 check "古いversionで入札→409(楽観ロック)" "409" "$code"
 err=$(python3 -c "import json; print(json.load(open('/tmp/bid_conflict.json'))['error'])")
 check "競合エラー種別=BID_CONFLICT" "BID_CONFLICT" "$err"
+
+# トークション: ポーリング用ステータスAPI
+code=$(curl -s -b $JAR -o /tmp/ta_status.json -w "%{http_code}" "$BASE/api/auction/status?ticketId=$TICKET_ID")
+check "GET /api/auction/status →200" "200" "$code"
+top=$(python3 -c "import json; d=json.load(open('/tmp/ta_status.json')); print(d['isTopBidder'] and d['currentPriceJpy']==1100)")
+check "ステータス: 自分がトップ・価格1100円" "True" "$top"
+
+# トークション: レビュー一覧(公開)
+code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/auction/reviews")
+check "GET /api/auction/reviews →200" "200" "$code"
+
+# トークション: 終了処理cron(認証なし→401 / あり→200)
+code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/api/auction/close")
+check "終了処理 認証なし→401" "401" "$code"
+code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/api/auction/close" -H "Authorization: Bearer test-cron-secret")
+check "終了処理 cron実行→200" "200" "$code"
 
 echo "===== 9. 退会フロー ====="
 code=$(curl -s -b $JAR -o /dev/null -w "%{http_code}" -X POST "$BASE/api/account/cancel")

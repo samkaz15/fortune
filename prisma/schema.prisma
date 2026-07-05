@@ -202,6 +202,9 @@ model AuctionTicket {
   opensAt       DateTime
   closesAt      DateTime // opensAtの24時間後を基本とする
   winningBidId  String?  @unique
+  winnerUserId  String? // 落札者(終了処理で確定)
+  profileText   String? // トークション: 占い師プロフィール(セクション1)
+  topics        Json? // トークション: 相談できる内容 string[](セクション2・管理APIで編集可)
   version       Int      @default(0) // 楽観ロック用。入札時にversionをインクリメントし競合を検知する
 
   bids Bid[]
@@ -416,4 +419,31 @@ model ExperimentAssignment {
   @@unique([userId, experimentKey])
   @@index([experimentKey, variant])
   @@map("experiment_assignments")
+}
+
+/// トークション: レビュー(星+コメント)。悪い評価も削除せず表示する(透明性重視・仕様書§3)。
+model AuctionReview {
+  id        String   @id @default(uuid())
+  ticketId  String
+  userId    String
+  rating    Int // 1-5
+  comment   String
+  createdAt DateTime @default(now())
+
+  @@unique([ticketId, userId])
+  @@index([createdAt])
+  @@map("auction_reviews")
+}
+
+/// トークション: 日程予約。決済完了後、カレンダー空き枠から選択して確定(仕様書§日程予約)。
+model AuctionReservation {
+  id          String   @id @default(uuid())
+  ticketId    String   @unique
+  userId      String
+  scheduledAt DateTime
+  status      String   @default("reserved") // reserved | done | canceled
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@map("auction_reservations")
 }
