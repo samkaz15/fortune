@@ -8,13 +8,14 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 /**
- * キャラクタープロンプトは /prompts/chat/system_prompt.v2.0.md から読み込む
+ * キャラクタープロンプトは /prompts/chat/system_prompt.v2.1.md から読み込む
  * (コードにハードコードしない方針はGPT3の申し送り通り維持)。
- * v2.0はCEO_STRAT(2026-07-03)で確定した「糸町の少年」本人キャラクターを反映したもの。
- * v1.0(ツクヨミ)は不採用。履歴として prompts/chat/ に残している。
+ * v2.1はCEO本人の実際の鑑定トークから抽出した会話スタイル
+ * (docs/design/02_brand_strategy/CEO_STYLE_conversation_guide.md)を統合したもの。
+ * v2.0(スタイル統合前)・v1.0(ツクヨミ・不採用)は履歴として prompts/chat/ に残している。
  */
 function loadCharacterPrompt(): string {
-  const promptPath = path.join(process.cwd(), "prompts", "chat", "system_prompt.v2.0.md");
+  const promptPath = path.join(process.cwd(), "prompts", "chat", "system_prompt.v2.1.md");
   try {
     return readFileSync(promptPath, "utf-8");
   } catch {
