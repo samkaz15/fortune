@@ -15,7 +15,7 @@ import path from "node:path";
  * v2.0(スタイル統合前)・v1.0(ツクヨミ・不採用)は履歴として prompts/chat/ に残している。
  */
 function loadCharacterPrompt(): string {
-  const promptPath = path.join(process.cwd(), "prompts", "chat", "system_prompt.v2.2.md");
+  const promptPath = path.join(process.cwd(), "prompts", "chat", "system_prompt.v2.3.md");
   try {
     return readFileSync(promptPath, "utf-8");
   } catch {
