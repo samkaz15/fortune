@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUserId, AuthRequiredError } from "@/lib/auth";
-import { consumeDailyFreeQuota } from "@/lib/redis";
+import { consumeDailyFreeQuota, refundDailyFreeQuota } from "@/lib/redis";
 import { acquireGenerationLock, releaseGenerationLock } from "@/lib/redis";
 import { generateFortune } from "@/lib/fortune-engine";
 import { getWeatherContext } from "@/lib/weather";
@@ -142,6 +142,41 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "GENERATION_IN_PROGRESS" }, { status: 429 });
   }
 
+  // CEO_QUOTA_definition(2026-07-05): 「1日5回」は"返信が届いた回数"でカウントする。
+  // 消費自体は上限突破防止のため生成前にアトミックに行い、
+  // 生成に失敗して返信を届けられなかった場合はここで払い戻す。
+  async function refundConsumedResource() {
+    try {
+      if (usedPoint) {
+        await prisma.$transaction([
+          prisma.pointBalance.update({ where: { userId }, data: { balance: { increment: 1 } } }),
+          prisma.pointTransaction.create({
+            data: { userId, type: "refund", amount: 1, reason: "返信生成失敗のため払い戻し" },
+          }),
+        ]);
+      } else if (usedCredit) {
+        await prisma.$transaction([
+          prisma.creditBalance.update({ where: { userId }, data: { balance: { increment: 1 } } }),
+          prisma.creditTransaction.create({ data: { userId, type: "refund", amount: 1 } }),
+        ]);
+      } else {
+        await refundDailyFreeQuota(userId);
+      }
+    } catch (refundError) {
+      // 払い戻し自体の失敗は監査ログに残す(ユーザー救済は手動対応)
+      console.error("[quota] refund failed", refundError);
+      await prisma.auditLog.create({
+        data: {
+          actorType: "system",
+          action: "quota_refund_failed",
+          targetType: "user",
+          targetId: userId,
+          metadata: { sessionId: session.id },
+        },
+      }).catch(() => {});
+    }
+  }
+
   try {
     const weatherContext = location ? await getWeatherContext(location.lat, location.lon) : null;
 
@@ -221,6 +256,14 @@ export async function POST(req: NextRequest) {
       usedPoint,
       remainingFreeQuota: quota.remaining,
     });
+  } catch (e) {
+    // 返信を届けられなかったため、消費リソースを払い戻す(CEO_QUOTA_definition)
+    console.error("[chat] generation failed", e);
+    await refundConsumedResource();
+    return NextResponse.json(
+      { error: "GENERATION_FAILED", message: "占いの生成に失敗しました。回数は消費されていません。もう一度お試しください。" },
+      { status: 500 }
+    );
   } finally {
     await releaseGenerationLock(session.id);
   }

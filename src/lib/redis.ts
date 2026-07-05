@@ -121,6 +121,19 @@ export async function getRemainingDailyFreeQuota(userId: string): Promise<number
 }
 
 /**
+ * 無料枠の払い戻し(CEO_QUOTA_definition 2026-07-05)。
+ * 「1日5回」は"糸町の少年からの返信が届いた回数"と定義されたため、
+ * 消費後に生成が失敗して返信を届けられなかった場合はカウンターを1戻す。
+ */
+export async function refundDailyFreeQuota(userId: string): Promise<void> {
+  const key = todayKey(userId);
+  const count = Number((await redis.get<number>(key)) ?? 0);
+  if (count > 0) {
+    await redis.set(key, count - 1, { ex: 60 * 60 * 26 });
+  }
+}
+
+/**
  * AI生成中の二重送信防止用の分散ロック。
  * 同一ユーザーが連打しても、Sakana AIへの二重リクエストを防ぐ。
  */
