@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { trackEvent } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
 import { requireUserId, AuthRequiredError } from "@/lib/auth";
 import { generateDailyReport } from "@/lib/decision-report";
@@ -68,6 +69,7 @@ export async function GET(req: NextRequest) {
         generatedBy: result.generatedBy,
       },
     });
+  trackEvent("report_generated", {}, userId);
     return NextResponse.json(toResponse(saved));
   } catch {
     const raced = await prisma.dailyReport.findUnique({

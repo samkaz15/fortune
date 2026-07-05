@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { trackEvent } from "@/lib/analytics";
 import Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/db";
@@ -91,6 +92,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         canceledAt: null,
       },
     });
+    trackEvent("subscription_started", {}, userId);
     return;
   }
 
@@ -126,6 +128,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         },
       }),
     ]);
+    trackEvent("payment_succeeded", { kind: "credit" }, userId);
   }
 }
 

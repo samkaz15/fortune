@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUserId, AuthRequiredError } from "@/lib/auth";
 import { consumeDailyFreeQuota, refundDailyFreeQuota } from "@/lib/redis";
+import { trackEvent } from "@/lib/analytics";
 import { acquireGenerationLock, releaseGenerationLock } from "@/lib/redis";
 import { generateFortune } from "@/lib/fortune-engine";
 import { getWeatherContext } from "@/lib/weather";
@@ -147,6 +148,8 @@ export async function POST(req: NextRequest) {
   if (!locked) {
     return NextResponse.json({ error: "GENERATION_IN_PROGRESS" }, { status: 429 });
   }
+
+  trackEvent("chat_message", { category, approxTokens: Math.ceil(message.length / 2) }, userId);
 
   // CEO_QUOTA_definition(2026-07-05): 「1日5回」は"返信が届いた回数"でカウントする。
   // 消費自体は上限突破防止のため生成前にアトミックに行い、

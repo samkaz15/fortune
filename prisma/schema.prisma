@@ -374,3 +374,46 @@ model KnowledgeEntry {
   @@index([userId, createdAt])
   @@map("knowledge_entries")
 }
+
+/// CL25: 分析イベント(DWH基盤)。トークン使用量を含む全行動ログ。GM10「トークン数でコスト管理」準拠。
+model AnalyticsEvent {
+  id        String   @id @default(uuid())
+  userId    String?
+  name      String // chat_message / report_generated / payment_succeeded / experiment_exposure など
+  props     Json? // 任意のプロパティ(category, tokens, amount等)
+  createdAt DateTime @default(now())
+
+  @@index([name, createdAt])
+  @@index([userId, createdAt])
+  @@map("analytics_events")
+}
+
+/// CL26: AI Feature Store。Sakana AIへ渡す特徴量をバージョン管理する。GM10「コンテンツの資産化」準拠。
+model UserFeature {
+  id               String   @id @default(uuid())
+  userId           String
+  version          Int // 同一ユーザー内で単調増加
+  consultCount30d  Int
+  favoriteCategory String? // 直近30日で最多の相談カテゴリ
+  avgScore30d      Float?
+  activeDays30d    Int
+  isSubscriber     Boolean
+  computedAt       DateTime @default(now())
+
+  @@unique([userId, version])
+  @@index([userId, computedAt])
+  @@map("user_features")
+}
+
+/// CL31: A/Bテスト割当。userIdハッシュによる決定論的バケット(再現可能・統計評価用)。
+model ExperimentAssignment {
+  id            String   @id @default(uuid())
+  userId        String
+  experimentKey String
+  variant       String
+  assignedAt    DateTime @default(now())
+
+  @@unique([userId, experimentKey])
+  @@index([experimentKey, variant])
+  @@map("experiment_assignments")
+}

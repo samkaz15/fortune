@@ -40,12 +40,27 @@ export interface NextCategoryRecommendation {
   category: ConsultCategory;
   label: string;
   /** データに基づく推薦か、フォールバックか(計測用に返す) */
-  source: "collaborative" | "fallback";
+  source: "personalized" | "collaborative" | "fallback";
 }
 
 export async function recommendNextCategory(
-  currentCategory: ConsultCategory
+  currentCategory: ConsultCategory,
+  userId?: string
 ): Promise<NextCategoryRecommendation> {
+  // CL27: Feature Store(CL26)による個別化。よく相談するカテゴリが現カテゴリと違えば優先提案。
+  // 匿名集計(協調フィルタ)より個人の実績を優先する(GM10「予測配信へのシフト」)。
+  if (userId) {
+    try {
+      const { getOrComputeUserFeatures } = await import("@/lib/feature-store");
+      const features = await getOrComputeUserFeatures(userId);
+      const fav = features.favoriteCategory as ConsultCategory | null;
+      if (fav && fav !== currentCategory && CATEGORY_LABEL[fav]) {
+        return { category: fav, label: CATEGORY_LABEL[fav], source: "personalized" };
+      }
+    } catch {
+      // Feature Store障害時は匿名集計へフォールバック(推薦は非クリティカル)
+    }
+  }
   // 「currentCategoryのセッションを完了したユーザーが、その次に完了したセッションのカテゴリ」を集計する。
   // ユーザーIDはGROUP化のキーとしてのみ使い、結果には個人情報を一切含めない(匿名集計)。
   const transitions = await prisma.$queryRaw<Array<{ next_category: ConsultCategory; cnt: bigint }>>`
