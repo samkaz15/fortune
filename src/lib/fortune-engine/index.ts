@@ -10,12 +10,12 @@ import path from "node:path";
 /**
  * キャラクタープロンプトは /prompts/chat/system_prompt.v2.1.md から読み込む
  * (コードにハードコードしない方針はGPT3の申し送り通り維持)。
- * v2.1はCEO本人の実際の鑑定トークから抽出した会話スタイル
+ * v2.2は連投廃止(1メッセージ集約)+事実ベース導入を反映。v2.1以前のスタイル抽出は
  * (docs/design/02_brand_strategy/CEO_STYLE_conversation_guide.md)を統合したもの。
  * v2.0(スタイル統合前)・v1.0(ツクヨミ・不採用)は履歴として prompts/chat/ に残している。
  */
 function loadCharacterPrompt(): string {
-  const promptPath = path.join(process.cwd(), "prompts", "chat", "system_prompt.v2.1.md");
+  const promptPath = path.join(process.cwd(), "prompts", "chat", "system_prompt.v2.2.md");
   try {
     return readFileSync(promptPath, "utf-8");
   } catch {
