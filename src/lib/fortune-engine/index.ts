@@ -35,6 +35,8 @@ export interface UserProfileInput {
 }
 
 export interface GenerateFortuneParams {
+  /** CV4: カテゴリ別の追加コンテキスト(恋愛=関係性、仕事=現職など)。プロンプトにそのまま渡す */
+  extraContext?: Record<string, string | undefined>;
   category: ConsultCategory;
   profile: UserProfileInput;
   /** 相性診断時のみ相手情報を渡す */
@@ -93,7 +95,7 @@ function systemsForCategory(category: ConsultCategory): DivinationSystem[] {
  * このルーティング自体もシステムプロンプト側では言及しない。
  */
 export async function generateFortune(params: GenerateFortuneParams): Promise<FortuneEngineOutput> {
-  const { category, profile, partnerProfile, userQuestion, weatherContext } = params;
+  const { category, profile, partnerProfile, userQuestion, weatherContext, extraContext } = params;
   const systems = systemsForCategory(category);
 
   const seimeiScore = systems.includes("seimei") ? calculateSeimei(profile.familyName, profile.givenName) : undefined;
@@ -120,6 +122,7 @@ export async function generateFortune(params: GenerateFortuneParams): Promise<Fo
       horoscope: horoscope ?? null,
       compatibilityScore: compatibilityScore ?? null,
       weather: weatherContext ?? null,
+      extraContext: extraContext ?? null,
     },
   });
 

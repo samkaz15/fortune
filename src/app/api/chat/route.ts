@@ -35,6 +35,12 @@ const requestSchema = z.object({
   sessionId: z.string().uuid().optional(), // 未指定なら新規セッションを開始
   category: z.enum(["RELATIONSHIP", "SELF", "BUSINESS", "COMPATIBILITY", "TODAY"]),
   message: z.string().min(1).max(2000),
+  context: z
+    .object({
+      relationship: z.enum(["片思い", "交際中", "復縁"]).optional(),
+      occupation: z.enum(["会社員", "経営者", "フリーランス", "学生"]).optional(),
+    })
+    .optional(),
   partner: z
     .object({
       familyName: z.string().min(1),
@@ -60,7 +66,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "INVALID_REQUEST", detail: parsed.error.flatten() }, { status: 400 });
   }
-  const { sessionId, category, message, partner, location } = parsed.data;
+  const { sessionId, category, message, partner, location, context } = parsed.data;
 
   // ---- 0. crisis検知(GPT3安全設計 Layer2) ----
   // 課金判定・AI生成より前に行う。自傷等の示唆がある場合は無料枠/クレジットを消費せず、
@@ -189,6 +195,7 @@ export async function POST(req: NextRequest) {
         birthTime: profile.birthTime ?? undefined,
         gender: profile.gender ?? undefined,
       },
+      extraContext: context,
       partnerProfile: partner
         ? {
             familyName: partner.familyName,

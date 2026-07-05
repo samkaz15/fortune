@@ -6,6 +6,10 @@
  * ドメインロジック(index.ts)からは常にこの関数だけを呼び、
  * 実際のAPI仕様変更の影響をここに閉じ込める(Data Access Layer的な考え方)。
  *
+ * 分析層の基礎プロンプトは prompts/analysis/occult_analysis_base.v1.md(Layer 0)。
+ * Sakana AI連携時は、まず分析層で客観分析(確信度付き)を行い、
+ * その結果をキャラクター層(system_prompt v2.3)が「糸町の少年」の言葉に翻訳する2段構成にする。
+ *
  * SAKANA_AI_API_KEY が未設定の開発環境では、モック応答にフォールバックする
  * (フロント/チャットの動作確認をAPIキーなしでも行えるようにするため)。
  */

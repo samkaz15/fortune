@@ -20,6 +20,10 @@ import type { WeatherContext } from "@/lib/weather";
 
 // ---- 出力スキーマ(Zodで厳格に検証) ----
 const reportSchema = z.object({
+  // キーワード3つ(CEO_ENGINE_routing_v2 / v3レビューで意味を再定義。JSONキーは保存互換のため不変):
+  //   fortune     = 「今日気をつける」(四柱推命由来・今日の運勢の注意)
+  //   userTheme   = 「中長期の必要行動」(いま積むべき姿勢)
+  //   environment = 「備えると良い」(備えておくと運が跳ねる項目)
   keywords: z.object({
     userTheme: z.string().min(1),
     environment: z.string().min(1),
@@ -49,7 +53,7 @@ interface ProfileInput {
 function loadTaskPrompt(): string {
   try {
     return readFileSync(
-      path.join(process.cwd(), "prompts", "chat", "decision_report_task.v1.0.md"),
+      path.join(process.cwd(), "prompts", "chat", "decision_report_task.v1.1.md"),
       "utf-8"
     );
   } catch {
@@ -177,9 +181,9 @@ function buildFallbackReport(input: LlmInput): ReportContent {
   const band = input.score >= 80 ? "high" : input.score >= 50 ? "mid" : "low";
 
   const summaryByBand: Record<string, string> = {
-    high: `今日は${input.score}点、追い風の一日だよ。「${theme}」に向き合ってきた君にとって、動くのに一番いいタイミングが来てる。${input.environmentKeyword}を感じる場面もあるかもしれないけど、それも君のペースを整えるサイン。迷っていたことがあるなら、今日それに一歩踏み出そう。大丈夫、必ずうまくいく。`,
-    mid: `今日は${input.score}点、力を積み上げる一日だよ。「${theme}」というテーマに、焦らず着実に向き合うのに向いてる。${input.environmentKeyword}っぽい空気を感じたら、それは丁寧に進めるべきサイン。小さな一歩でも、今日の積み重ねが次の追い風につながる。大丈夫、必ずうまくいく。`,
-    low: `今日は${input.score}点、自分の内側を整える一日だよ。「${theme}」について、静かに考えを深めるのにぴったりの日。${input.environmentKeyword}を感じやすいから、予定を詰め込みすぎず、余白を持って過ごそう。この時間も、なりたい自分に近づいてる証拠。大丈夫、必ずうまくいく。`,
+    high: `今日は${input.score}点、かなり追い風です。「${theme}」に向き合ってきた流れに、動くならいちばんいいタイミングが来てます。周りのペースに合わせる必要はないので、迷っていたことをひとつだけ、午前のうちに決めてしまうのがおすすめです。それだけで、今日は十分です。`,
+    mid: `今日は${input.score}点。派手さはないですが、積み上げがそのまま効く日です。「${theme}」については、焦って進めるより足場をひとつ固めるのが正解。「${input.environmentKeyword}」っぽい空気を感じたら、それは丁寧に進むサインだと思ってください。ひとつ決めて、あとは淡々と。それで十分です。`,
+    low: `今日は${input.score}点。無理に攻める日ではないです、、が、内側を整えるにはすごくいい日です。「${theme}」について静かに考えを深めて、予定は詰め込みすぎず余白を持って過ごしてください。今日ゆっくり休むのも、ちゃんと前に進むことの一部です。明日に回す勇気もありますよ。`,
   };
 
   const cautionsByBand: Record<string, [string, string, string]> = {
@@ -189,9 +193,9 @@ function buildFallbackReport(input: LlmInput): ReportContent {
   };
 
   const actionByBand: Record<string, string> = {
-    high: `「${theme}」に関して迷っていたことを、今日1つだけ決めて動き出す`,
-    mid: `「${theme}」のために、10分だけ準備の時間を取る`,
-    low: `今日感じたことを3行だけメモして、明日の自分に残す`,
+    high: `もし今日ひとつだけやるなら、「${theme}」で迷っていたことをひとつ決めて動き出すのがいいと思います`,
+    mid: `もし今日ひとつだけやるなら、「${theme}」のために10分だけ準備の時間を取るのがいいと思います`,
+    low: `今日感じたことを3行だけメモして、明日の自分に残しておくのがいいと思います`,
   };
 
   return {
@@ -202,7 +206,7 @@ function buildFallbackReport(input: LlmInput): ReportContent {
     },
     summary: summaryByBand[band],
     cautions: cautionsByBand[band],
-    advice: `いま君が向き合っている「${theme}」は、ちゃんと前に進んでるよ。今日の空気は「${input.environmentKeyword}」、運気のキーワードは「${input.fortuneKeyword}」。この2つを合わせると、今日は自分のリズムを守りながら、決めたことを1つだけ確実にやり切る日。周りに流されず、君のペースで進めば大丈夫。`,
+    advice: `いま向き合っている「${theme}」、ちゃんと前に進んでます。今日の空気は「${input.environmentKeyword}」、注意しておきたいのは「${input.fortuneKeyword}」。合わせると、今日は自分のリズムを守って、決めたことをひとつだけ確実にやり切る日です。それと——迷いが長引くのは決断力の問題じゃなくて、少し疲れているだけのことが多いです。`,
     todayAction: actionByBand[band],
   };
 }

@@ -53,6 +53,9 @@ export function ChatWindow({ initialCategory }: { initialCategory: Category | nu
   const [partner, setPartner] = useState<PartnerInfo | null>(null);
   const [partnerFormOpen, setPartnerFormOpen] = useState(false);
   const [partnerDraft, setPartnerDraft] = useState<PartnerInfo>({ familyName: "", givenName: "", birthDate: "" });
+  // CV4: カテゴリ別の追加コンテキスト(恋愛=関係性/仕事=現職)。conversion_spec.md §1
+  const [relationship, setRelationship] = useState<"片思い" | "交際中" | "復縁" | null>(null);
+  const [occupation, setOccupation] = useState<"会社員" | "経営者" | "フリーランス" | "学生" | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -98,6 +101,10 @@ export function ChatWindow({ initialCategory }: { initialCategory: Category | nu
           category,
           message: userMessage,
           partner: category === "COMPATIBILITY" && partner ? partner : undefined,
+          context:
+            relationship || occupation
+              ? { relationship: relationship ?? undefined, occupation: occupation ?? undefined }
+              : undefined,
         }),
       });
       const data = await res.json();
@@ -170,9 +177,40 @@ export function ChatWindow({ initialCategory }: { initialCategory: Category | nu
           <ChatBubble key={i} role={m.role} content={m.content} />
         ))}
 
+        {category === "BUSINESS" && !occupation && messages.length <= 1 && (
+          <div className="rounded-card border border-ink-700 bg-ink-900/50 p-3">
+            <p className="mb-2 text-xs text-paper-400">いまの立場を教えてもらえると、話が早いよ</p>
+            <div className="flex flex-wrap gap-2">
+              {(["会社員", "経営者", "フリーランス", "学生"] as const).map((o) => (
+                <button
+                  key={o}
+                  onClick={() => setOccupation(o)}
+                  className="rounded-full border border-ink-700 px-3 py-1.5 text-[11px] font-bold text-paper-300 transition active:scale-95"
+                >
+                  {o}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {partnerFormOpen && (
           <div className="rounded-card border border-gold-500/40 bg-ink-900/70 p-4 text-sm text-paper-200">
             <p className="mb-3 font-bold text-gold-400">相手の情報を教えて</p>
+            <div className="mb-3 flex gap-2">
+              {(["片思い", "交際中", "復縁"] as const).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setRelationship(r)}
+                  className={`flex-1 rounded-full border px-2 py-1.5 text-[11px] font-bold transition ${
+                    relationship === r
+                      ? "border-gold-500 bg-gold-500/10 text-gold-400"
+                      : "border-ink-700 text-paper-400"
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
             <div className="mb-2 grid grid-cols-2 gap-2">
               <input
                 placeholder="姓"
