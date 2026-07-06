@@ -57,6 +57,7 @@ model UserProfile {
   birthTime   String? // 出生時間（任意、HH:mm）。四柱推命の精度向上に使う
   gender      String? // male | female | other | unspecified
   displayName String? // 表示用ニックネーム（非PII寄り。マイページ等で表示）
+  avatar      String? // ユーザー設定アイコン(縮小済みJPEGのdata URL・上限100KB)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

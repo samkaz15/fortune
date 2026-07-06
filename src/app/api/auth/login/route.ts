@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   res.cookies.set("dev_user_id", user.id, {
     httpOnly: true,
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: 60 * 60 * 24, // 24時間有効(CEO要求 2026-07-07)
     path: "/",
   });
   return res;

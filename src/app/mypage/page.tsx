@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { AvatarUploader } from "@/components/AvatarUploader";
 import { prisma } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/auth";
 import { getRemainingDailyFreeQuota } from "@/lib/redis";
@@ -30,9 +31,7 @@ export default async function MyPage() {
   return (
     <div className="flex flex-col gap-6 px-5 pt-4">
       <section className="flex items-center gap-4 rounded-card border border-ink-700 bg-ink-900/50 p-5">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-ink-800 font-display text-lg text-gold-400">
-          {profile?.displayName?.slice(0, 1) ?? "?"}
-        </div>
+        <AvatarUploader initialAvatar={profile?.avatar ?? null} fallbackChar={profile?.displayName?.slice(0, 1) ?? "?"} />
         <div>
           <p className="font-display text-base text-paper-50">{profile?.displayName ?? "ゲスト"}</p>
           <p className="text-xs text-paper-400">

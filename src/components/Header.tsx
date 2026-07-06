@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronLeft, User, Menu, X } from "lucide-react";
 
@@ -35,8 +35,16 @@ export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const isTop = pathname === "/";
-  const isLoggedIn = false; // TODO: 認証セッションから取得する
   const [open, setOpen] = useState(false);
+  // 実セッション状態(CEO要求 2026-07-07: 人マークはログイン時マイページへ+設定画像/頭文字を表示)
+  const [me, setMe] = useState<{ loggedIn: boolean; displayName: string | null; avatar: string | null }>({ loggedIn: false, displayName: null, avatar: null });
+  useEffect(() => {
+    const load = () => fetch("/api/auth/me").then((r) => r.json()).then(setMe).catch(() => {});
+    load();
+    window.addEventListener("avatar-updated", load); // マイページでの画像変更を即反映
+    return () => window.removeEventListener("avatar-updated", load);
+  }, [pathname]);
+  const isLoggedIn = me.loggedIn;
 
   return (
     <>
@@ -59,9 +67,16 @@ export function Header() {
           <Link
             href={isLoggedIn ? "/mypage" : "/auth/login"}
             aria-label={isLoggedIn ? "マイページ" : "ログイン"}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-ink-800 text-paper-200"
+            className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-ink-800 text-paper-200"
           >
-            <User size={18} />
+            {me.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={me.avatar} alt="" className="h-full w-full object-cover" />
+            ) : isLoggedIn && me.displayName ? (
+              <span className="font-display text-sm text-gold-400">{me.displayName.slice(0, 1)}</span>
+            ) : (
+              <User size={18} />
+            )}
           </Link>
           <button
             onClick={() => setOpen(true)}
