@@ -56,11 +56,7 @@ export default function ReportPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center gap-3 pt-24">
-        <p className="animate-pulse text-sm text-paper-400">今日のレポートをまとめてるよ…</p>
-      </div>
-    );
+    return <DramaticLoading />;
   }
 
   if (error) {
@@ -127,12 +123,43 @@ export default function ReportPage() {
         <p className="font-display text-base leading-relaxed text-paper-50">{report.todayAction}</p>
       </section>
 
+      {/* CV1: ここから先の核心(モザイク寸止め) + CV3: 感情CTA */}
+      <section className="relative overflow-hidden rounded-card border border-gold-500/40" style={{ minHeight: 210 }}>
+        <div className="p-5 text-sm leading-relaxed text-paper-200 blur-[7px] select-none">
+          この先、あなたの流れが大きく動く日が今月の中にあります。その少し前に、ある人からの連絡が判断の決め手になりそうです。具体的にいうと——
+        </div>
+        <div className="absolute inset-0 flex flex-col items-center justify-end bg-gradient-to-b from-transparent via-ink-950/70 to-ink-950/95 p-5 text-center">
+          <p className="mb-3 text-[11px] font-bold text-gold-400">✦ ここから先は、直接お話しします</p>
+          <Link href="/consult" className="w-full rounded-full bg-gold-500 py-3 text-sm font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1">
+            この先を、僕から聞く
+          </Link>
+          <p className="mt-2 text-[10px] text-paper-500">今日はあと 5回 話せます</p>
+        </div>
+      </section>
+
       <Link
         href="/consult"
         className="rounded-full border border-gold-500/50 py-3 text-center text-sm font-bold text-gold-400"
       >
         もっと詳しく相談する
       </Link>
+    </div>
+  );
+}
+
+/** CV2: 3秒ドラマチックローディング(糸をたどる→重ねる→スコアリング) */
+function DramaticLoading() {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const t1 = setTimeout(() => setStep(1), 1200);
+    const t2 = setTimeout(() => setStep(2), 2400);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+  const texts = ["糸をたどっています、、", "今日の流れと重ねています（65%）", "スコアリングで出しますね。"];
+  return (
+    <div className="flex flex-col items-center gap-5 pt-32">
+      <div className="h-16 w-16 animate-spin rounded-full border-2 border-ink-700 border-t-gold-500" />
+      <p className="animate-pulse text-sm text-paper-200">{texts[step]}</p>
     </div>
   );
 }
