@@ -82,3 +82,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ evaluated: users.length, sent, skipped });
 }
+
+// Vercel CronはGETで叩くため同じハンドラをGETにも割り当てる
+export const GET = POST;

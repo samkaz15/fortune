@@ -14,3 +14,6 @@ export async function POST(req: NextRequest) {
   const result = await closeExpiredAuctions();
   return NextResponse.json(result);
 }
+
+// Vercel CronはGETで叩くため同じハンドラをGETにも割り当てる
+export const GET = POST;
