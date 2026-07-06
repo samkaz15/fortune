@@ -6,6 +6,10 @@ const nextConfig = {
   },
   // CL29: キャッシュ/CDN強化。静的アセットはエッジ/ブラウザで長期キャッシュし、
   // オリジン(Next.jsサーバー)への到達自体を減らす(GM10「エッジ活用」準拠)。
+  // 占い相談はv4インターフェース(LP)へ接続(CEO指示 2026-07-06)。全会員種別アクセス可
+  async redirects() {
+    return [{ source: "/consult", destination: "/report-ui/index.html", permanent: false }];
+  },
   async headers() {
     return [
       {

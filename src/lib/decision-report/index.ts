@@ -8,6 +8,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
+import { interpretDayStem } from "@/lib/fortune-engine/interpretation-dictionary";
 import { calculateShichu } from "@/lib/fortune-engine/shichu";
 import { calculateSanmei } from "@/lib/fortune-engine/sanmei";
 import { calculateHoroscope } from "@/lib/fortune-engine/horoscope";
@@ -102,6 +103,7 @@ export async function generateDailyReport(params: {
     environmentKeyword: env.keyword,
     environmentSupport: env.supportKeywords,
     fortuneKeyword,
+    dayStem: shichu.dayStem, // 日干(解釈辞書でのパーソナライズ用)
     signals: {
       timing: { wave: shichu.wave, advice: shichu.advice }, // 四柱推命→タイミング
       business: { orientation: sanmei.orientation, advice: sanmei.advice }, // 算命学→仕事
@@ -133,6 +135,7 @@ function extractFortuneKeyword(advice: string): string {
 type LlmInput = {
   score: number;
   stars: number;
+  dayStem?: string;
   userTheme: string | null;
   recentTags: string[];
   recentConcerns: string[];
@@ -178,22 +181,29 @@ async function generateWithRetry(input: LlmInput): Promise<ReportContent | null>
  */
 function buildFallbackReport(input: LlmInput): ReportContent {
   const theme = input.userTheme ?? input.fortuneKeyword;
-  const band = input.score >= 80 ? "high" : input.score >= 50 ? "mid" : "low";
+  // 評価トーン4帯(CEOフィードバック 2026-07-06):
+  // high=いい評価 / challenge=勝負の日(一歩踏み込む) / mid=普通 / low=悪い評価(でも前向きに着地)
+  const band = input.score >= 85 ? "high" : input.score >= 70 ? "challenge" : input.score >= 50 ? "mid" : "low";
+  // 日干の解釈辞書(Core Mapping Spec)を織り込み、生年月日ごとに文面を変える
+  const stem = interpretDayStem(input.dayStem ?? "戊");
 
   const summaryByBand: Record<string, string> = {
-    high: `今日は${input.score}点、かなり追い風です。「${theme}」に向き合ってきた流れに、動くならいちばんいいタイミングが来てます。周りのペースに合わせる必要はないので、迷っていたことをひとつだけ、午前のうちに決めてしまうのがおすすめです。それだけで、今日は十分です。`,
-    mid: `今日は${input.score}点。派手さはないですが、積み上げがそのまま効く日です。「${theme}」については、焦って進めるより足場をひとつ固めるのが正解。「${input.environmentKeyword}」っぽい空気を感じたら、それは丁寧に進むサインだと思ってください。ひとつ決めて、あとは淡々と。それで十分です。`,
-    low: `今日は${input.score}点。無理に攻める日ではないです、、が、内側を整えるにはすごくいい日です。「${theme}」について静かに考えを深めて、予定は詰め込みすぎず余白を持って過ごしてください。今日ゆっくり休むのも、ちゃんと前に進むことの一部です。明日に回す勇気もありますよ。`,
+    high: `今日は${input.score}点、かなり追い風です。${stem.state}の力がいつもより強く出ているので、「${theme}」で迷っていたことは、動くならいちばんいいタイミング。周りのペースに合わせる必要はないです。午前のうちにひとつだけ決めてしまえば、今日は十分です。`,
+    challenge: `今日は${input.score}点。正直に言うと——今日は勝負どころです。${stem.description}この流れは、待つより一歩踏み込んだ人に味方します。「${theme}」について、いつもより半歩だけ深く踏み込んでみてください。怖さが少しあるくらいが、ちょうどいい日です。`,
+    mid: `今日は${input.score}点。派手さはないですが、積み上げがそのまま効く日です。「${theme}」については、焦って進めるより${stem.action}のが正解。「${input.environmentKeyword}」っぽい空気を感じたら、それは丁寧に進むサインだと思ってください。ひとつ決めて、あとは淡々と。それで十分です。`,
+    low: `今日は${input.score}点。無理に攻める日ではないです、、が、内側を整えるにはすごくいい日です。${stem.state}のあなたにとって、こういう日は「${theme}」の土台を静かに固めるチャンス。予定は詰め込みすぎず、余白を持って過ごしてください。今日ゆっくり休むのも、ちゃんと前に進むことの一部です。`,
   };
 
   const cautionsByBand: Record<string, [string, string, string]> = {
     high: ["勢い任せの約束", "確認せずの送信", "夜更かし"],
+    challenge: ["迷いすぎて時機を逃すこと", "他人の顔色を見すぎること", "深夜の考えごと"],
     mid: ["予定の詰め込みすぎ", "他人との比較", "衝動買い"],
     low: ["即決", "感情的な返信", "無理なスケジュール"],
   };
 
   const actionByBand: Record<string, string> = {
     high: `もし今日ひとつだけやるなら、「${theme}」で迷っていたことをひとつ決めて動き出すのがいいと思います`,
+    challenge: `もし今日ひとつだけやるなら、「${theme}」でいちばん気になっている相手や場所に、自分から連絡を入れるのがいいと思います。今日は踏み込んだ分だけ返ってきます`,
     mid: `もし今日ひとつだけやるなら、「${theme}」のために10分だけ準備の時間を取るのがいいと思います`,
     low: `今日感じたことを3行だけメモして、明日の自分に残しておくのがいいと思います`,
   };

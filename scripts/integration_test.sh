@@ -19,10 +19,13 @@ check() {  # $1=テスト名 $2=期待値 $3=実際値
 }
 
 echo "===== 1. 画面疎通(未ログイン) ====="
-for path in "/" "/consult" "/plans" "/auction" "/news" "/auth/login" "/auth/signup" "/legal/terms" "/legal/privacy" "/legal/tokushoho"; do
+for path in "/" "/plans" "/auction" "/news" "/auth/login" "/auth/signup" "/legal/terms" "/legal/privacy" "/legal/tokushoho"; do
   code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE$path")
   check "GET $path" "200" "$code"
 done
+# 占い相談はv4 LPへ接続(CEO指示 2026-07-06)。リダイレクト追跡で最終200を確認
+code=$(curl -s -o /dev/null -w "%{http_code}" -L "$BASE/consult")
+check "GET /consult →v4 LP(追跡後200)" "200" "$code"
 
 echo "===== 2. 認証ガード(未ログインで保護APIを叩く) ====="
 code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/api/chat" -H "Content-Type: application/json" -d '{"category":"TODAY","message":"テスト"}')
