@@ -28,8 +28,12 @@ function shichuScore(birthDate: Date): number {
 }
 
 export async function GET(req: NextRequest) {
-  const lat = Number(req.nextUrl.searchParams.get("lat") ?? 35.68);
-  const lon = Number(req.nextUrl.searchParams.get("lon") ?? 139.76);
+  let lat = Number(req.nextUrl.searchParams.get("lat") ?? 35.68);
+  let lon = Number(req.nextUrl.searchParams.get("lon") ?? 139.76);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+    lat = 35.68;
+    lon = 139.76;
+  }
 
   const weather = await getWeatherContext(lat, lon);
   const wScore = weather ? weatherScore(weather.pressureHpa) : 0;
@@ -50,6 +54,6 @@ export async function GET(req: NextRequest) {
   else if (total >= 3) greeting = "今日は、元気そうだね！";
   else greeting = "今日は、ぼちぼちでいこうか。";
 
-  // スコアの内訳はユーザーに出さない（挨拶文のみ）。デバッグ用に軸だけ返す
-  return NextResponse.json({ greeting, axes: { weather: wScore, shichu: sScore, total } });
+  // スコアの内訳(軸の値)は非開示原則に従いレスポンスに含めない(挨拶文のみ返す)
+  return NextResponse.json({ greeting });
 }

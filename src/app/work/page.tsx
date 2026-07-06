@@ -113,6 +113,14 @@ export default function WorkPage() {
             <div className="mb-4 rounded-xl border border-gold-500/25 bg-gold-500/5 p-4 text-center text-xs text-gold-300">この状態は「向いていない」のではなく「整理されていない状態」です。</div>
 
             <div className="mb-4 rounded-card border border-ink-700 bg-ink-900/70 p-5">
+              <p className="mb-1 text-[9px] font-bold tracking-widest text-gold-400">01b ｜ 消耗の正体と、合わない環境</p>
+              {reading.essence.stress && (
+                <p className="text-sm leading-relaxed text-paper-100">いちばん消耗しやすいのは<b className="text-paper-50">「{reading.essence.stress}」</b>がある状況です。疲れの原因は能力ではなく、この条件との距離にあります。</p>
+              )}
+              <p className="mt-2 text-sm leading-relaxed text-paper-100">逆に、<b className="text-paper-50">{reading.essence.ngEnvironment}</b>のような環境では型が活きません。環境を選ぶときは、この一点だけ避けてください。</p>
+            </div>
+
+            <div className="mb-4 rounded-card border border-ink-700 bg-ink-900/70 p-5">
               <p className="mb-1 text-[9px] font-bold tracking-widest text-gold-400">02 ｜ いまの仕事の流れ(中長期)</p>
               <p className="text-sm leading-relaxed text-paper-100">{reading.midTerm}</p>
             </div>

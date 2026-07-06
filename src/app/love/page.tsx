@@ -10,6 +10,7 @@ import { MilkyWayBackground } from "@/components/MilkyWayBackground";
 
 interface Reading {
   score: number;
+  scoreComment: string;
   meters: { closeness: number; talk: number; energy: number };
   layers: {
     surface: string; partner: string; flow: string; action: string;
@@ -96,7 +97,7 @@ export default function LovePage() {
             <div className="mb-4 rounded-card border border-ink-700 bg-ink-900/70 p-5 text-center">
               <p className="text-[9px] font-bold tracking-widest text-rose-300">SCORE ｜ ふたりの縁</p>
               <p className="mt-1 text-4xl font-bold text-rose-300">{reading.score}<span className="text-sm">点</span></p>
-              <p className="mt-1 text-[11px] text-paper-400">数字は高めです。ただ、点数より大事なことが下にあります。</p>
+              <p className="mt-1 text-[11px] text-paper-400">{reading.scoreComment}</p>
               <div className="mt-4 text-left">
                 <Meter label="心の距離" v={reading.meters.closeness} />
                 <Meter label="会話の噛み合い" v={reading.meters.talk} />

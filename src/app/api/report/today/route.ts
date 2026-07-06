@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getRemainingDailyFreeQuota } from "@/lib/redis";
 import { trackEvent } from "@/lib/analytics";
 import { prisma } from "@/lib/db";
 import { requireUserId, AuthRequiredError } from "@/lib/auth";
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest) {
     where: { userId_reportDate: { userId, reportDate } },
   });
   if (existing) {
-    return NextResponse.json(toResponse(existing));
+    return NextResponse.json({ ...toResponse(existing), remainingFreeQuota: await getRemainingDailyFreeQuota(userId) });
   }
 
   const lat = Number(req.nextUrl.searchParams.get("lat"));
@@ -70,12 +71,12 @@ export async function GET(req: NextRequest) {
       },
     });
   trackEvent("report_generated", {}, userId);
-    return NextResponse.json(toResponse(saved));
+    return NextResponse.json({ ...toResponse(saved), remainingFreeQuota: await getRemainingDailyFreeQuota(userId) });
   } catch {
     const raced = await prisma.dailyReport.findUnique({
       where: { userId_reportDate: { userId, reportDate } },
     });
-    if (raced) return NextResponse.json(toResponse(raced));
+    if (raced) return NextResponse.json({ ...toResponse(raced), remainingFreeQuota: await getRemainingDailyFreeQuota(userId) });
     throw new Error("DailyReport save failed");
   }
 }

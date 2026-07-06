@@ -33,8 +33,17 @@ export async function POST(req: NextRequest) {
     subscribed = Boolean(sub);
   }
 
+  // スコア帯に応じたコメント(固定文言の矛盾を防ぐ)
+  const scoreComment =
+    score >= 85
+      ? "数字は高めです。ただ、点数より大事なことが下にあります。"
+      : score >= 65
+        ? "悪くない数字です。ただ、点数より大事なことが下にあります。"
+        : "数字は控えめです。でも、これは「終わり」ではなく「整理前」の数字です。";
+
   return NextResponse.json({
     score,
+    scoreComment,
     meters: { closeness, talk, energy },
     layers: {
       surface: "今の関係は安定しているように見えますが、実はまだ「お互いの理解が揃っていない状態」です。",

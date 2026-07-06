@@ -13,6 +13,7 @@ interface Report {
   cautions: string[];
   advice: string;
   todayAction: string;
+  remainingFreeQuota?: number;
 }
 
 /**
@@ -133,7 +134,11 @@ export default function ReportPage() {
           <Link href="/consult" className="w-full rounded-full bg-gold-500 py-3 text-sm font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1">
             この先を、僕から聞く
           </Link>
-          <p className="mt-2 text-[10px] text-paper-500">今日はあと 5回 話せます</p>
+          <p className="mt-2 text-[10px] text-paper-500">
+            {typeof report.remainingFreeQuota === "number"
+              ? `今日はあと ${report.remainingFreeQuota}回 話せます`
+              : "今日の無料相談から聞けます"}
+          </p>
         </div>
       </section>
 
