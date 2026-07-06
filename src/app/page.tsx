@@ -1,5 +1,21 @@
 import Link from "next/link";
 import { ScoreOrb } from "@/components/ScoreOrb";
+import { prisma } from "@/lib/db";
+import { getCurrentUserId } from "@/lib/auth";
+import { calculateShichu } from "@/lib/fortune-engine/shichu";
+
+export const dynamic = "force-dynamic";
+
+/** 今日のスコア: 本人の四柱wave(占いエンジン)。未ログインは日替わりの汎用値 */
+async function todayScore(): Promise<number> {
+  const userId = await getCurrentUserId();
+  if (userId) {
+    const p = await prisma.userProfile.findUnique({ where: { userId } });
+    if (p) return calculateShichu(p.birthDate).wave;
+  }
+  const d = new Date();
+  return 55 + ((d.getDate() * 7 + d.getMonth() * 3) % 31); // 55-85の日替わり
+}
 import { PopularRanking } from "@/components/PopularRanking";
 import { HomeGreeting } from "@/components/HomeGreeting";
 import { AffSlot } from "@/components/ui-common";
@@ -10,7 +26,8 @@ import { AffSlot } from "@/components/ui-common";
  * 実データ(今日の運気スコア/最新結果)は認証実装後にサーバーコンポーネントでfetchする形に差し替える。
  * 現状はログイン前でも迷わない導線を優先し、静的なプレースホルダーで構成している。
  */
-export default function TopPage() {
+export default async function TopPage() {
+  const score = await todayScore();
   return (
     <div className="flex flex-col gap-8 px-5">
       <section className="flex flex-col items-center gap-4 pt-4 text-center">
@@ -29,7 +46,7 @@ export default function TopPage() {
       </section>
 
       <section className="flex flex-col items-center gap-4 rounded-card border border-ink-700 bg-ink-900/60 px-6 py-8 shadow-lantern">
-        <ScoreOrb score={72} size={140} />
+        <ScoreOrb score={score} size={140} />
         <p className="text-center text-sm text-paper-200">
           今日は「流れに乗る」日。
           <br />
