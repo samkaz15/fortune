@@ -61,7 +61,8 @@ export async function GET(req: NextRequest) {
     userId,
     profile: { familyName, givenName, birthDate: profile.birthDate },
     weather,
-    date: today,
+    date: reportDate, // 期間代表日をシードに(今日/週初/月初/翌月初で占い結果が変わる)
+    periodLabel: period === "week" ? "今週" : period === "month" ? "今月" : period === "nextMonth" ? "来月" : "今日",
   });
 
   // 同時アクセスでの二重生成に備え、ユニーク制約違反時は既存を返す

@@ -56,7 +56,7 @@ export default async function TopPage() {
           href="/report"
           className="w-full rounded-full bg-gold-500 py-3 text-center font-bold text-ink-950 transition active:scale-[0.98]"
         >
-          今日の意思決定レポートを見る
+          今日の自分の運勢レポートを見る
         </Link>
       </section>
 

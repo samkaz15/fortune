@@ -67,6 +67,7 @@ export async function generateDailyReport(params: {
   profile: ProfileInput;
   weather: WeatherContext | null;
   date?: Date;
+  periodLabel?: string;
 }): Promise<DailyReportResult> {
   const { userId, profile, weather } = params;
   const date = params.date ?? new Date();
@@ -103,7 +104,8 @@ export async function generateDailyReport(params: {
     environmentKeyword: env.keyword,
     environmentSupport: env.supportKeywords,
     fortuneKeyword,
-    dayStem: shichu.dayStem, // 日干(解釈辞書でのパーソナライズ用)
+    dayStem: shichu.dayStem,
+    periodLabel: params.periodLabel ?? "今日",
     signals: {
       timing: { wave: shichu.wave, advice: shichu.advice }, // 四柱推命→タイミング
       business: { orientation: sanmei.orientation, advice: sanmei.advice }, // 算命学→仕事
@@ -134,6 +136,7 @@ function extractFortuneKeyword(advice: string): string {
 
 type LlmInput = {
   score: number;
+  periodLabel?: string;
   stars: number;
   dayStem?: string;
   userTheme: string | null;
@@ -186,12 +189,13 @@ function buildFallbackReport(input: LlmInput): ReportContent {
   const band = input.score >= 85 ? "high" : input.score >= 70 ? "challenge" : input.score >= 50 ? "mid" : "low";
   // 日干の解釈辞書(Core Mapping Spec)を織り込み、生年月日ごとに文面を変える
   const stem = interpretDayStem(input.dayStem ?? "戊");
+  const L = input.periodLabel ?? "今日";
 
   const summaryByBand: Record<string, string> = {
-    high: `今日は${input.score}点、かなり追い風です。${stem.state}の力がいつもより強く出ているので、「${theme}」で迷っていたことは、動くならいちばんいいタイミング。周りのペースに合わせる必要はないです。午前のうちにひとつだけ決めてしまえば、今日は十分です。`,
-    challenge: `今日は${input.score}点。正直に言うと——今日は勝負どころです。${stem.description}この流れは、待つより一歩踏み込んだ人に味方します。「${theme}」について、いつもより半歩だけ深く踏み込んでみてください。怖さが少しあるくらいが、ちょうどいい日です。`,
-    mid: `今日は${input.score}点。派手さはないですが、積み上げがそのまま効く日です。「${theme}」については、焦って進めるより${stem.action}のが正解。「${input.environmentKeyword}」っぽい空気を感じたら、それは丁寧に進むサインだと思ってください。ひとつ決めて、あとは淡々と。それで十分です。`,
-    low: `今日は${input.score}点。無理に攻める日ではないです、、が、内側を整えるにはすごくいい日です。${stem.state}のあなたにとって、こういう日は「${theme}」の土台を静かに固めるチャンス。予定は詰め込みすぎず、余白を持って過ごしてください。今日ゆっくり休むのも、ちゃんと前に進むことの一部です。`,
+    high: `${L}は${input.score}点、かなり追い風です。${stem.state}の力がいつもより強く出ているので、「${theme}」で迷っていたことは、動くならいちばんいいタイミング。周りのペースに合わせる必要はないです。午前のうちにひとつだけ決めてしまえば、今日は十分です。`,
+    challenge: `${L}は${input.score}点。正直に言うと——${L}は勝負どころです。${stem.description}この流れは、待つより一歩踏み込んだ人に味方します。「${theme}」について、いつもより半歩だけ深く踏み込んでみてください。怖さが少しあるくらいが、ちょうどいい日です。`,
+    mid: `${L}は${input.score}点。派手さはないですが、積み上げがそのまま効く日です。「${theme}」については、焦って進めるより${stem.action}のが正解。「${input.environmentKeyword}」っぽい空気を感じたら、それは丁寧に進むサインだと思ってください。ひとつ決めて、あとは淡々と。それで十分です。`,
+    low: `${L}は${input.score}点。無理に攻める流れではないです、、が、内側を整えるにはすごくいい日です。${stem.state}のあなたにとって、こういう日は「${theme}」の土台を静かに固めるチャンス。予定は詰め込みすぎず、余白を持って過ごしてください。今日ゆっくり休むのも、ちゃんと前に進むことの一部です。`,
   };
 
   const cautionsByBand: Record<string, [string, string, string]> = {
