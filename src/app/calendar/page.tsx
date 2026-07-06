@@ -7,6 +7,7 @@
  * - 日タップで暦の吉日名+「あなたへのポイント」を表示。凡例をカレンダー下に記載
  */
 import { useEffect, useState, useCallback } from "react";
+import { AffSlot } from "@/components/ui-common";
 
 interface FDay {
   date: string;
@@ -243,6 +244,7 @@ export default function FengshuiCalendarPage() {
           )}
         </>
       )}
+          <AffSlot />
     </main>
   );
 }

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { AffSlot } from "@/components/ui-common";
 import { prisma } from "@/lib/db";
 
 /**
@@ -69,6 +70,8 @@ export default async function ShrineDetailPage({ params }: { params: { id: strin
         );
       })}
 
+      <AffSlot />
+
       {media.videoUrl && (
         <section className="rounded-card border border-ink-700 bg-ink-900/40 p-3">
           <h2 className="mb-2 text-xs font-bold text-paper-400">ショート動画</h2>
@@ -103,6 +106,7 @@ export default async function ShrineDetailPage({ params }: { params: { id: strin
           運営者の参拝レビューは、実際に参拝でき次第この場所に追加されます。
         </p>
       )}
+          <AffSlot />
     </div>
   );
 }

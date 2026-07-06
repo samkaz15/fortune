@@ -71,6 +71,8 @@ export default async function TopPage() {
         </div>
       </section>
 
+      <AffSlot />
+
       <PopularRanking />
 
       <section className="rounded-card border border-torii-500/30 bg-ink-900/40 px-5 py-4">

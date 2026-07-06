@@ -15,6 +15,7 @@
  * - 終了後: 落札者には決済(Stripe)→決済完了後のみ予約画面へ(銀行振込はCEO判断で廃止 2026-07-06)
  */
 import { useEffect, useState, useCallback, useRef } from "react";
+import { AffSlot } from "@/components/ui-common";
 
 interface Ticket {
   id: string;
@@ -336,6 +337,7 @@ export default function AuctionPage() {
           </div>
         </div>
       )}
+      <AffSlot />
     </main>
   );
 }

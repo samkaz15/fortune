@@ -6,7 +6,7 @@
  * 結果: ①状態②傾向③注意1つ④行動1つ(Core Mapping Spec固定フォーマット)。深掘りはサブスク。
  */
 import { useState } from "react";
-import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA } from "@/components/ui-common";
+import {GlassMosaic, ScrollProgress, ShareRow, FloatingCTA, AffSlot } from "@/components/ui-common";
 
 interface Reading {
   name: string;
@@ -149,6 +149,7 @@ export default function SelfPage() {
           <FloatingCTA label="この結果について、僕に聞く" href="/consult?category=SELF" />
         </div>
       )}
+          <AffSlot />
     </div>
   );
 }

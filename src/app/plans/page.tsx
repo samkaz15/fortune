@@ -1,4 +1,5 @@
 "use client";
+import { AffSlot } from "@/components/ui-common";
 
 import { useState } from "react";
 
@@ -73,6 +74,7 @@ export default function PlansPage() {
           </button>
         </section>
       )}
+      <AffSlot />
     </div>
   );
 }

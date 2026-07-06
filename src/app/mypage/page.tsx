@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AffSlot } from "@/components/ui-common";
 import Link from "next/link";
 import { AvatarUploader } from "@/components/AvatarUploader";
 import { prisma } from "@/lib/db";
@@ -86,6 +87,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
     <div className="rounded-card border border-ink-700 bg-ink-900/40 p-4">
       <p className="text-[11px] text-paper-400">{label}</p>
       <p className="mt-1 font-display text-lg text-gold-400">{value}</p>
+      <AffSlot />
     </div>
   );
 }

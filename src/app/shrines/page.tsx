@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AffSlot } from "@/components/ui-common";
 import Link from "next/link";
 
 interface ShrineItem {
@@ -78,6 +79,7 @@ export default function ShrinesPage() {
           <p className="text-center text-sm text-paper-400">神社情報は順次追加していきます。</p>
         )}
       </div>
+          <AffSlot />
     </div>
   );
 }

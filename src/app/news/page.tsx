@@ -1,3 +1,4 @@
+import { AffSlot } from "@/components/ui-common";
 /**
  * 画面遷移設計書「お知らせ一覧」の実装。
  * TODO: 現状はNewsテーブルが未設計のため、CEOコメント/キャンペーン告知用の
@@ -18,6 +19,7 @@ export default async function NewsPage() {
           </div>
         ))}
       </div>
+      <AffSlot />
     </div>
   );
 }
