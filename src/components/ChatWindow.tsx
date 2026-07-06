@@ -3,22 +3,18 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-type Category = "RELATIONSHIP" | "SELF" | "BUSINESS" | "COMPATIBILITY" | "TODAY";
+type Category = "SELF" | "BUSINESS" | "COMPATIBILITY";
 
 const CATEGORY_LABEL: Record<Category, string> = {
-  RELATIONSHIP: "人間関係",
   SELF: "自分のこと",
-  BUSINESS: "ビジネス",
-  COMPATIBILITY: "相性",
-  TODAY: "今日の占い",
+  BUSINESS: "仕事・キャリア",
+  COMPATIBILITY: "恋愛・相性",
 };
 
 const CATEGORY_PROMPT: Record<Category, string> = {
-  RELATIONSHIP: "人間関係のことだね。今、気になっている相手やできごとを教えて。",
   SELF: "自分のことだね。今どんなことにモヤモヤしてる?",
   BUSINESS: "ビジネスのことだね。今のキャリアで気になっていることを教えて。",
   COMPATIBILITY: "相性を見るには、相手の名前と生年月日も必要だよ。まずは相談内容を教えて。",
-  TODAY: "今日の運気を見るね。何か気をつけたいことはある?（なければ「特になし」でOK）",
 };
 
 interface ChatMessage {
@@ -49,7 +45,7 @@ export function ChatWindow({ initialCategory }: { initialCategory: Category | nu
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
-  const [errorCta, setErrorCta] = useState<null | { message: string; href: string; label: string }>(null);
+  const [errorCta, setErrorCta] = useState<null | { message: string; href: string; label: string; note?: string }>(null);
   const [partner, setPartner] = useState<PartnerInfo | null>(null);
   const [partnerFormOpen, setPartnerFormOpen] = useState(false);
   const [partnerDraft, setPartnerDraft] = useState<PartnerInfo>({ familyName: "", givenName: "", birthDate: "" });
@@ -122,10 +118,12 @@ export function ChatWindow({ initialCategory }: { initialCategory: Category | nu
         return;
       }
       if (res.status === 402) {
+        // 会員仕様v5: 無料会員→「もっと占う ※初月500円 月額980円」/ 有料会員→「追加5回 ¥300」
         setErrorCta({
-          message: "今日の無料分は使い切ったよ。追加クレジットで続けられるよ。",
-          href: "/plans",
-          label: "続きを見る",
+          message: data.message ?? "今日の分は使い切ったよ。",
+          href: data.cta?.href ?? "/plans",
+          label: data.cta?.label ?? "もっと占う",
+          note: data.cta?.note,
         });
         return;
       }
@@ -155,8 +153,7 @@ export function ChatWindow({ initialCategory }: { initialCategory: Category | nu
         <h1 className="font-display text-lg text-paper-50">何について相談する?</h1>
         <div className="grid grid-cols-2 gap-3">
           {(Object.keys(CATEGORY_LABEL) as Category[])
-            .filter((c) => c !== "TODAY")
-            .map((c) => (
+                        .map((c) => (
               <button
                 key={c}
                 onClick={() => setCategory(c)}
@@ -251,6 +248,7 @@ export function ChatWindow({ initialCategory }: { initialCategory: Category | nu
             >
               {errorCta.label}
             </a>
+            {errorCta.note && <p className="mt-2 text-center text-[10px] text-paper-500">{errorCta.note}</p>}
           </div>
         )}
         <div ref={bottomRef} />

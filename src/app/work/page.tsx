@@ -6,7 +6,7 @@
  * 無料: 本質＋中長期＋今日の行動 / 有料: 将来の相性を業界×部署で特定（ロック）
  */
 import { useState } from "react";
-import { MilkyWayBackground } from "@/components/MilkyWayBackground";
+import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA } from "@/components/ui-common";
 
 type Situation = "うまくいっている" | "少し疲れている" | "判断に迷っている" | "環境を変えたい";
 
@@ -20,7 +20,6 @@ interface Reading {
     | { locked: true; preview: string; cta: string };
 }
 
-const SITUATIONS: Situation[] = ["うまくいっている", "少し疲れている", "判断に迷っている", "環境を変えたい"];
 const MENU = [
   ["あなたの本質(働き方の核)", "生年月日から、生まれ持った行動の型と強みを構造的に見ます"],
   ["いまの仕事の流れ", "中長期で見た、いまが「積む時期」か「動く時期」か"],
@@ -32,7 +31,8 @@ const MENU = [
 export default function WorkPage() {
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
-  const [situation, setSituation] = useState<Situation>("少し疲れている");
+  // UI仕様v5: 「現在の状況」入力は削除。API互換のためデフォルト値のみ送る
+  const situation: Situation = "判断に迷っている";
   const [phase, setPhase] = useState<"input" | "loading" | "result">("input");
   const [reading, setReading] = useState<Reading | null>(null);
 
@@ -54,7 +54,6 @@ export default function WorkPage() {
 
   return (
     <main className="relative mx-auto min-h-screen max-w-md px-5 pb-24 pt-8 text-paper-200">
-      <MilkyWayBackground />
       <div className="relative z-10">
         {phase === "input" && (
           <>
@@ -68,12 +67,6 @@ export default function WorkPage() {
               <input value={name} onChange={(e) => setName(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-gold-500" placeholder="糸子" />
               <label className="mb-1 block text-[11px] font-bold text-paper-100">生年月日</label>
               <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-gold-500" />
-              <label className="mb-1 block text-[11px] font-bold text-paper-100">現在の状況</label>
-              <div className="mb-4 grid grid-cols-2 gap-2">
-                {SITUATIONS.map((s) => (
-                  <button key={s} onClick={() => setSituation(s)} className={`rounded-full border px-2 py-2 text-[11px] font-bold transition ${situation === s ? "border-gold-500 bg-gold-500/10 text-gold-400" : "border-ink-700 text-paper-400"}`}>{s}</button>
-                ))}
-              </div>
               <button onClick={run} disabled={!name || !birthDate} className="w-full rounded-full bg-gold-500 py-3.5 text-sm font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1 active:shadow-none disabled:opacity-40">仕事の流れを見る</button>
             </div>
 
@@ -90,6 +83,19 @@ export default function WorkPage() {
                 </div>
               ))}
             </div>
+
+            {/* 診断前の結果サンプル(無料版UI・UI仕様v5) */}
+            <p className="mb-2 mt-8 text-center text-[10px] font-bold tracking-widest text-paper-500">SAMPLE ｜ こんな結果が届きます</p>
+            <div className="pointer-events-none select-none opacity-80 pb-8">
+              <div className="rounded-card border border-ink-700 bg-ink-900/70 p-5">
+                <p className="text-[9px] font-bold tracking-widest text-gold-400">01 ｜ あなたの本質</p>
+                <p className="mt-2 text-sm leading-relaxed text-paper-100">蓄積と現実化。コツコツ積んだものを形に変える力が強い型です。</p>
+              </div>
+              <div className="mt-3 rounded-card border border-ink-700 bg-ink-900/70 p-5">
+                <p className="text-[9px] font-bold tracking-widest text-gold-400">02 ｜ いまの仕事の流れ(中長期)</p>
+                <p className="mt-2 text-sm leading-relaxed text-paper-100">いまは「動く時期」ではなく「積む時期」の後半。切り替わりは近い位置に見えています。</p>
+              </div>
+            </div>
           </>
         )}
 
@@ -101,7 +107,8 @@ export default function WorkPage() {
         )}
 
         {phase === "result" && reading && (
-          <div className="pt-4">
+          <div className="pb-28 pt-4">
+            <ScrollProgress />
             <div className="mb-4 rounded-card border border-ink-700 bg-ink-900/70 p-5">
               <p className="mb-1 text-[9px] font-bold tracking-widest text-gold-400">01 ｜ あなたの本質</p>
               <p className="text-sm leading-relaxed text-paper-100">{reading.essence.core}</p>
@@ -159,9 +166,12 @@ export default function WorkPage() {
               </div>
             )}
 
+            <ShareRow text={`働き方の本質、見てもらった — 糸町の少年`} />
             <div className="my-6 flex h-[100px] items-center justify-center rounded-2xl border border-dashed border-ink-700/50 text-[9px] tracking-widest text-ink-600">
               キャリア参考情報（外部リンク）
             </div>
+            <div className="h-16" />
+            <FloatingCTA label="この結果について、僕に聞く" href="/consult?category=BUSINESS" />
           </div>
         )}
       </div>

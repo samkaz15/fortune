@@ -15,6 +15,12 @@ export default async function ShrineDetailPage({ params }: { params: { id: strin
   if (!shrine) notFound();
 
   const tags = (shrine.tags as string[]) ?? [];
+  // UI仕様v5: 画像・ショート動画(YouTube埋込)・SNSリンク
+  const media = (shrine.media ?? {}) as {
+    imageUrl?: string;
+    videoUrl?: string;
+    sns?: { x?: string; instagram?: string; tiktok?: string };
+  };
 
   return (
     <div className="flex flex-col gap-5 px-5 pt-4 pb-8">
@@ -31,6 +37,11 @@ export default async function ShrineDetailPage({ params }: { params: { id: strin
           ))}
         </div>
       </div>
+
+      {media.imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={media.imageUrl} alt={shrine.name} className="h-44 w-full rounded-card border border-ink-700 object-cover" />
+      )}
 
       <section className="rounded-card border border-ink-700 bg-ink-900/40 p-4">
         <h2 className="mb-2 text-xs font-bold text-paper-400">基本情報</h2>
@@ -57,6 +68,35 @@ export default async function ShrineDetailPage({ params }: { params: { id: strin
           </section>
         );
       })}
+
+      {media.videoUrl && (
+        <section className="rounded-card border border-ink-700 bg-ink-900/40 p-3">
+          <h2 className="mb-2 text-xs font-bold text-paper-400">ショート動画</h2>
+          <div className="overflow-hidden rounded-xl" style={{ aspectRatio: "16/9" }}>
+            <iframe
+              src={media.videoUrl}
+              title={`${shrine.name} の動画`}
+              className="h-full w-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        </section>
+      )}
+
+      {media.sns && (media.sns.x || media.sns.instagram || media.sns.tiktok) && (
+        <section className="flex gap-2">
+          {media.sns.x && (
+            <a href={media.sns.x} target="_blank" rel="noopener noreferrer" className="flex-1 rounded-full border border-ink-700 py-2 text-center text-xs font-bold text-paper-200">X</a>
+          )}
+          {media.sns.instagram && (
+            <a href={media.sns.instagram} target="_blank" rel="noopener noreferrer" className="flex-1 rounded-full border border-ink-700 py-2 text-center text-xs font-bold text-paper-200">Instagram</a>
+          )}
+          {media.sns.tiktok && (
+            <a href={media.sns.tiktok} target="_blank" rel="noopener noreferrer" className="flex-1 rounded-full border border-ink-700 py-2 text-center text-xs font-bold text-paper-200">TikTok</a>
+          )}
+        </section>
+      )}
 
       {shrine.reviews.length === 0 && (
         <p className="text-center text-xs text-paper-600">

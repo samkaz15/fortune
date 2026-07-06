@@ -23,9 +23,47 @@ interface FMonth {
   month: string;
   days: FDay[];
   cautionWeeks: number[];
+  monthlyText?: string;
+  personalReason?: string;
+  personal?: boolean;
+  signupPrompt?: string;
 }
 
 const WD = ["日", "月", "火", "水", "木", "金", "土"];
+const monthCache = new Map<string, FMonth>();
+
+/** 月内いちばんの開運日をGoogleカレンダーに追加(UI仕様v5の共有機能) */
+function shareGoogle(data: FMonth) {
+  const best = data.days.find((d) => d.isBest);
+  if (!best) return alert("今月の開運日が見つかりませんでした");
+  const ymd = best.date.replaceAll("-", "");
+  const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent("開運日(糸町の少年)")}&dates=${ymd}/${ymd}&details=${encodeURIComponent(`暦の吉日: ${best.good.join("・") || "—"}。大事なこと・新しいことはこの日に。`)}`;
+  window.open(url, "_blank");
+}
+
+/** 開運日と注意日をICS(iPhoneカレンダー等)としてダウンロード */
+function downloadIcs(data: FMonth) {
+  const lines: string[] = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//itomachi//fengshui//JP"];
+  for (const d of data.days) {
+    if (!d.isBest && !d.isCaution) continue;
+    const ymd = d.date.replaceAll("-", "");
+    lines.push(
+      "BEGIN:VEVENT",
+      `DTSTART;VALUE=DATE:${ymd}`,
+      `DTEND;VALUE=DATE:${ymd}`,
+      `SUMMARY:${d.isBest ? "開運日(糸町の少年)" : "注意日(糸町の少年)"}`,
+      `DESCRIPTION:${d.isBest ? `暦の吉日: ${d.good.join("・") || "—"}` : "大事な決断は避けて、休息と準備の日に"}`,
+      "END:VEVENT"
+    );
+  }
+  lines.push("END:VCALENDAR");
+  const blob = new Blob([lines.join("\r\n")], { type: "text/calendar" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `itomachi-${data.month}.ics`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
 
 export default function FengshuiCalendarPage() {
   const now = new Date();
@@ -37,15 +75,20 @@ export default function FengshuiCalendarPage() {
 
   const load = useCallback(async () => {
     setError("");
+    // 高速化(UI仕様v5): 取得済みの月はメモリキャッシュから即時表示
+    const cacheKey = `${year}-${month}`;
+    const cached = monthCache.get(cacheKey);
+    if (cached) {
+      setData(cached);
+      setSelected(null);
+      return;
+    }
     const res = await fetch(`/api/calendar/fengshui?year=${year}&month=${month}`);
     const d = await res.json();
     if (res.ok) {
+      monthCache.set(cacheKey, d);
       setData(d);
       setSelected(null);
-    } else if (d.error === "AUTH_REQUIRED") {
-      setError("風水カレンダーを見るにはログインしてください。");
-    } else if (d.error === "PROFILE_REQUIRED") {
-      setError("生年月日の登録が必要です。マイページから登録してください。");
     } else {
       setError("読み込みに失敗しました。");
     }
@@ -95,7 +138,7 @@ export default function FengshuiCalendarPage() {
               ))}
             </div>
             {weeks.map((week, wi) => (
-              <div key={wi} className={`grid grid-cols-7 rounded-lg ${data.cautionWeeks.includes(wi) ? "bg-red-500/5" : ""}`}>
+              <div key={wi} className="grid grid-cols-7 rounded-lg">
                 {week.map((d, di) =>
                   d ? (
                     <button
@@ -128,8 +171,44 @@ export default function FengshuiCalendarPage() {
             </p>
             <p className="mt-2 flex items-center gap-2">
               <span className="inline-block h-3.5 w-3.5 flex-none rounded bg-red-400/40" />
-              <span><b className="text-paper-200">淡い赤</b> … 心が揺れやすい注意日(薄い赤の行は、その日を含む注意の週)。大事な決断は避けて、休息と準備の日に。</span>
+              <span><b className="text-paper-200">淡い赤</b> … 心が揺れやすい注意日。大事な決断は避けて、休息と準備の日に。</span>
             </p>
+          </div>
+
+          {/* 非会員: 登録誘導 / 会員: 月運(約250字)+個人最適化の理由(UI仕様v5) */}
+          {!data.personal ? (
+            <a href="/auth/signup" className="mt-3 block rounded-card border border-gold-500/40 bg-gold-500/5 p-4 text-center">
+              <p className="text-xs font-bold text-gold-400">{data.signupPrompt ?? "登録すると自分専用カレンダーになります"}</p>
+              <p className="mt-1 text-[10px] text-paper-400">生年月日から、あなただけの開運日と注意日を計算します</p>
+            </a>
+          ) : (
+            <>
+              {data.monthlyText && (
+                <div className="mt-3 rounded-card border border-ink-700 bg-ink-900/40 p-4">
+                  <p className="mb-1 text-[10px] font-bold tracking-widest text-gold-400">MONTHLY ｜ 今月の流れ</p>
+                  <p className="text-xs leading-relaxed text-paper-200">{data.monthlyText}</p>
+                </div>
+              )}
+              {data.personalReason && (
+                <p className="mt-2 px-1 text-[10px] leading-relaxed text-paper-500">{data.personalReason}</p>
+              )}
+            </>
+          )}
+
+          {/* カレンダー共有(Google/iPhone) */}
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={() => shareGoogle(data)}
+              className="flex-1 rounded-full border border-ink-700 py-2 text-[11px] font-bold text-paper-200"
+            >
+              Googleカレンダーに追加
+            </button>
+            <button
+              onClick={() => downloadIcs(data)}
+              className="flex-1 rounded-full border border-ink-700 py-2 text-[11px] font-bold text-paper-200"
+            >
+              iPhoneカレンダーに追加
+            </button>
           </div>
 
           {/* 日別詳細 */}

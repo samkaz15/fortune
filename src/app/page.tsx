@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ScoreOrb } from "@/components/ScoreOrb";
 import { PopularRanking } from "@/components/PopularRanking";
 import { HomeGreeting } from "@/components/HomeGreeting";
+import { AffSlot } from "@/components/ui-common";
 
 /**
  * 画面遷移設計書「TOP(ホーム)」の実装。
@@ -69,7 +70,9 @@ export default function TopPage() {
           カレンダーを見る →
         </Link>
       </section>
-    </div>
+          {/* アフィリエイト枠(ホームは最下部1枠のみ・UI仕様v5) */}
+      <AffSlot />
+</div>
   );
 }
 

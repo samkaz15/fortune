@@ -48,13 +48,6 @@ export default async function MyPage() {
       </section>
 
       <Link
-        href="/mypage/invite"
-        className="rounded-card border border-torii-500/40 bg-ink-900/40 px-4 py-3 text-center text-sm font-bold text-torii-500"
-      >
-        友達を招待してポイントをもらう
-      </Link>
-
-      <Link
         href="/plans"
         className="rounded-full border border-gold-500/50 py-3 text-center text-sm font-bold text-gold-400"
       >

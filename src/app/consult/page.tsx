@@ -1,7 +1,8 @@
 import { ChatWindow } from "@/components/ChatWindow";
 
-type Category = "RELATIONSHIP" | "SELF" | "BUSINESS" | "COMPATIBILITY" | "TODAY";
-const VALID_CATEGORIES: Category[] = ["RELATIONSHIP", "SELF", "BUSINESS", "COMPATIBILITY", "TODAY"];
+type Category = "SELF" | "BUSINESS" | "COMPATIBILITY";
+// 占い相談はカテゴリ選択のみ(自分のこと/恋愛・相性/仕事・キャリア)。人間関係・隠しレイヤーは削除(UI仕様v5)
+const VALID_CATEGORIES: Category[] = ["SELF", "BUSINESS", "COMPATIBILITY"];
 
 export default function ConsultPage({
   searchParams,

@@ -6,7 +6,7 @@
  * 表層(安心)→中層(気づき)→深層(ロック)。深層はサブスクで解放。
  */
 import { useState } from "react";
-import { MilkyWayBackground } from "@/components/MilkyWayBackground";
+import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA } from "@/components/ui-common";
 
 interface Reading {
   score: number;
@@ -55,12 +55,12 @@ export default function LovePage() {
 
   return (
     <main className="relative mx-auto min-h-screen max-w-md px-5 pb-24 pt-8 text-paper-200">
-      <MilkyWayBackground />
       <div className="relative z-10">
         {phase === "input" && (
           <>
             <div className="py-8 text-center">
-              <h1 className="text-xl font-bold text-paper-50">ふたりの関係を、短く整理します</h1>
+              <h1 className="text-xl font-bold text-paper-50">恋愛・相性</h1>
+              <p className="mt-1 text-sm text-paper-200">ふたりの関係を、短く整理します</p>
               <p className="mt-2 text-xs text-paper-400">関係には、まだ言葉になっていない部分があります</p>
             </div>
             <div className="rounded-card border border-ink-700 bg-ink-900/70 p-5">
@@ -82,6 +82,19 @@ export default function LovePage() {
                 </div>
               ))}
             </div>
+
+            {/* 診断前の結果サンプル(無料版UIと同じ・UI仕様v5) */}
+            <p className="mb-2 mt-8 text-center text-[10px] font-bold tracking-widest text-paper-500">SAMPLE ｜ こんな結果が届きます</p>
+            <div className="pointer-events-none select-none opacity-80 pb-8">
+              <div className="rounded-card border border-ink-700 bg-ink-900/70 p-5 text-center">
+                <p className="text-[9px] font-bold tracking-widest text-rose-300">SCORE ｜ ふたりの縁</p>
+                <p className="mt-1 text-4xl font-bold text-rose-300">87<span className="text-sm">点</span></p>
+              </div>
+              <div className="mt-3 rounded-card border border-ink-700 bg-ink-900/70 p-5">
+                <p className="text-[9px] font-bold tracking-widest text-rose-300">01 ｜ 現在の関係性</p>
+                <p className="mt-2 text-sm leading-relaxed text-paper-100">今の関係は安定しているように見えますが、実はまだ「お互いの理解が揃っていない状態」です。</p>
+              </div>
+            </div>
           </>
         )}
 
@@ -93,7 +106,8 @@ export default function LovePage() {
         )}
 
         {phase === "result" && reading && (
-          <div className="pt-4">
+          <div className="pb-28 pt-4">
+            <ScrollProgress />
             <div className="mb-4 rounded-card border border-ink-700 bg-ink-900/70 p-5 text-center">
               <p className="text-[9px] font-bold tracking-widest text-rose-300">SCORE ｜ ふたりの縁</p>
               <p className="mt-1 text-4xl font-bold text-rose-300">{reading.score}<span className="text-sm">点</span></p>
@@ -132,7 +146,10 @@ export default function LovePage() {
               )}
             </div>
 
+            <ShareRow text={`ふたりの相性は${reading.score}点でした — 糸町の少年`} />
             <div className="my-6 flex h-[100px] items-center justify-center rounded-2xl border border-dashed border-ink-700/50 text-[9px] tracking-widest text-ink-600">AFFILIATE SLOT AREA C</div>
+            <div className="h-16" />
+            <FloatingCTA label="この関係について、僕に聞く" href="/consult?category=COMPATIBILITY" />
           </div>
         )}
       </div>

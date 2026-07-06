@@ -13,19 +13,22 @@ import { ChevronLeft, User, Menu, X } from "lucide-react";
 
 const MENU: { href: string; label: string; note?: string }[] = [
   { href: "/", label: "ホーム", note: "今日は何をみる？" },
-  { href: "/report", label: "今日のレポート", note: "毎朝の意思決定レポート" },
-  { href: "/consult", label: "相談チャット", note: "糸町の少年と話す(1日5回無料)" },
-  { href: "/calendar", label: "風水カレンダー", note: "あなたの開運日と注意日" },
+  { href: "/report", label: "今日の運勢", note: "今日・今週・今月・来月" },
+  { href: "/consult", label: "占い相談", note: "糸町の少年と話す" },
+  { href: "/self", label: "自分のこと", note: "本来の性格・強み・今日の行動" },
   { href: "/love", label: "恋愛・相性占い", note: "ふたりの関係を整理する" },
   { href: "/work", label: "仕事・キャリア占い", note: "働き方の本質と中長期の流れ" },
+  { href: "/calendar", label: "風水カレンダー", note: "あなたの開運日と注意日" },
   { href: "/auction", label: "トークション", note: "電話占いオークション" },
   { href: "/shrines", label: "縁のある神社", note: "今日の運気に合う参拝先" },
   { href: "/news", label: "お知らせ" },
   { href: "/plans", label: "プラン・お支払い" },
   { href: "/mypage", label: "マイページ" },
-  { href: "/settings/notifications", label: "通知設定" },
+  { href: "/mypage/notifications", label: "通知設定" },
   { href: "/legal/terms", label: "利用規約" },
   { href: "/legal/privacy", label: "プライバシーポリシー" },
+  { href: "/legal/tokushoho", label: "特定商取引法に基づく表記" },
+  { href: "/support", label: "お問い合わせ・サポート", note: "公式LINEでご案内します" },
 ];
 
 export function Header() {
@@ -98,6 +101,16 @@ export function Header() {
                 </li>
               ))}
             </ul>
+            <button
+              onClick={async () => {
+                await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+                setOpen(false);
+                window.location.href = "/";
+              }}
+              className="mt-4 w-full rounded-xl border border-ink-700 px-3 py-2.5 text-left text-[13px] font-bold text-paper-400 hover:bg-ink-800"
+            >
+              ログアウト
+            </button>
           </nav>
         </div>
       )}

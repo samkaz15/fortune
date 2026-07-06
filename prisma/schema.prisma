@@ -312,6 +312,7 @@ model Shrine {
   city          String
   tags          Json // ["恋愛","金運","仕事運"] 等の悩みタグ(IA設計書⑤のタグ設計に準拠)
   generalInfo   String // 一般情報(住所・由緒等、参拝前に配信する内容)
+  media         Json? // UI仕様v5: { imageUrl?, videoUrl?(YouTube埋込URL), sns?: { x?, instagram?, tiktok? } }
   latitude      Float?
   longitude     Float?
   createdAt     DateTime @default(now())

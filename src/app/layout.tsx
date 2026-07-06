@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { BottomNav } from "@/components/BottomNav";
 import { Header } from "@/components/Header";
+import { MilkyWayBackground } from "@/components/MilkyWayBackground";
 
 /**
  * フォントについて:
@@ -31,8 +32,9 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body className="bg-lantern-gradient min-h-dvh font-body text-paper-50 antialiased">
+        <MilkyWayBackground />
         <Header />
-        <main className="mx-auto min-h-dvh max-w-md pb-24 pt-14">
+        <main className="relative z-10 mx-auto min-h-dvh max-w-md pb-24 pt-14">
           {children}
         </main>
         <BottomNav />

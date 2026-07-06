@@ -29,13 +29,24 @@ export async function GET(req: NextRequest) {
   }
 
   const today = new Date();
-  const reportDate = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+  // 期間タブ(UI仕様v5): today/week/month/nextMonth。同ロジック・同スキーマで、
+  // 期間の代表日(週=週初の月曜/月=1日/来月=翌月1日)をシードにして生成・保存する。
+  const period = req.nextUrl.searchParams.get("period") ?? "today";
+  let reportDate = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+  if (period === "week") {
+    const dow = (reportDate.getUTCDay() + 6) % 7; // 月曜=0
+    reportDate = new Date(reportDate.getTime() - dow * 86_400_000);
+  } else if (period === "month") {
+    reportDate = new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1));
+  } else if (period === "nextMonth") {
+    reportDate = new Date(Date.UTC(today.getFullYear(), today.getMonth() + 1, 1));
+  }
 
   const existing = await prisma.dailyReport.findUnique({
     where: { userId_reportDate: { userId, reportDate } },
   });
   if (existing) {
-    return NextResponse.json({ ...toResponse(existing), remainingFreeQuota: await getRemainingDailyFreeQuota(userId) });
+    return NextResponse.json({ ...toResponse(existing), remainingFreeQuota: await getRemainingDailyFreeQuota(userId), isSubscribed: await hasActiveSub(userId) });
   }
 
   const lat = Number(req.nextUrl.searchParams.get("lat"));
@@ -71,14 +82,19 @@ export async function GET(req: NextRequest) {
       },
     });
   trackEvent("report_generated", {}, userId);
-    return NextResponse.json({ ...toResponse(saved), remainingFreeQuota: await getRemainingDailyFreeQuota(userId) });
+    return NextResponse.json({ ...toResponse(saved), remainingFreeQuota: await getRemainingDailyFreeQuota(userId), isSubscribed: await hasActiveSub(userId) });
   } catch {
     const raced = await prisma.dailyReport.findUnique({
       where: { userId_reportDate: { userId, reportDate } },
     });
-    if (raced) return NextResponse.json({ ...toResponse(raced), remainingFreeQuota: await getRemainingDailyFreeQuota(userId) });
+    if (raced) return NextResponse.json({ ...toResponse(raced), remainingFreeQuota: await getRemainingDailyFreeQuota(userId), isSubscribed: await hasActiveSub(userId) });
     throw new Error("DailyReport save failed");
   }
+}
+
+async function hasActiveSub(userId: string): Promise<boolean> {
+  const sub = await prisma.subscription.findFirst({ where: { userId, status: "active" } });
+  return Boolean(sub);
 }
 
 function toResponse(r: {

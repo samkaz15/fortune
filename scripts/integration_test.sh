@@ -40,12 +40,31 @@ check "POST /api/auth/signup" "200" "$code"
 code=$(curl -s -b $JAR -o /dev/null -w "%{http_code}" "$BASE/mypage")
 check "GET /mypage ログイン済→200" "200" "$code"
 
-echo "===== 4. 占いチャット(カテゴリ別占術ルーティング) ====="
-for cat in TODAY SELF BUSINESS RELATIONSHIP; do
+echo "===== 4. 占いチャット(会員仕様v5: 無料会員=1回/日) ====="
+code=$(curl -s -b $JAR -o /tmp/chat_TODAY.json -w "%{http_code}" -X POST "$BASE/api/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"category":"TODAY","message":"最近どうすればいいか迷っています"}')
+check "無料会員1回目→200" "200" "$code"
+code=$(curl -s -b $JAR -o /tmp/free2.json -w "%{http_code}" -X POST "$BASE/api/chat" \
+  -H "Content-Type: application/json" -d '{"category":"SELF","message":"2回目です"}')
+check "無料会員2回目→402(もっと占う誘導)" "402" "$code"
+cta=$(python3 -c "import json;print(json.load(open('/tmp/free2.json'))['cta']['label'])")
+check "CTA=もっと占う" "もっと占う" "$cta"
+note=$(python3 -c "import json;print('初月500円' in json.load(open('/tmp/free2.json'))['cta']['note'])")
+check "CTA注記に初月500円" "True" "$note"
+
+# 有料会員化(DB直接)して、カテゴリ別ルーティング+5回/日を検証
+USER_ID=$(PGPASSWORD=itomachi_dev psql -h localhost -U itomachi -d itomachi -tA -c \
+  "SELECT id FROM users ORDER BY \"createdAt\" DESC LIMIT 1")
+PGPASSWORD=itomachi_dev psql -h localhost -U itomachi -d itomachi -c \
+  "INSERT INTO subscriptions (id, \"userId\", status, \"planPriceJpy\", \"currentPeriodEnd\", \"createdAt\", \"updatedAt\")
+   VALUES (gen_random_uuid()::text, '$USER_ID', 'active', 980, now() + interval '30 days', now(), now())"
+echo "  (有料会員化: $USER_ID)"
+for cat in SELF BUSINESS RELATIONSHIP; do
   code=$(curl -s -b $JAR -o /tmp/chat_$cat.json -w "%{http_code}" -X POST "$BASE/api/chat" \
     -H "Content-Type: application/json" \
     -d "{\"category\":\"$cat\",\"message\":\"最近どうすればいいか迷っています\"}")
-  check "POST /api/chat category=$cat" "200" "$code"
+  check "有料会員 POST /api/chat category=$cat" "200" "$code"
 done
 
 RESULT_ID=$(python3 -c "import json; print(json.load(open('/tmp/chat_TODAY.json'))['resultId'])")
@@ -69,8 +88,8 @@ check "未課金→bodyText非公開(None)" "None" "$body"
 code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/result/$RESULT_ID")
 check "GET /result/:id 画面表示" "200" "$code"
 
-echo "===== 7. 1日5回制限(すでに5回消費済み: TODAY/SELF/BUSINESS/RELATIONSHIP/crisis前) ====="
-# crisis検知はquota消費前に発動するため、ここまでの消費は4回。あと1回は成功するはず
+echo "===== 7. 有料会員の1日5回制限(ここまで4回消費: TODAY+SELF+BUSINESS+RELATIONSHIP) ====="
+# crisis検知はquota消費前に発動するため消費に含まれない。5回目は成功するはず
 code=$(curl -s -b $JAR -o /dev/null -w "%{http_code}" -X POST "$BASE/api/chat" \
   -H "Content-Type: application/json" -d '{"category":"TODAY","message":"5回目の質問"}')
 check "5回目→200" "200" "$code"
@@ -227,7 +246,7 @@ check "GET /api/referral コード発行" "200" "$code"
 REF_CODE=$(python3 -c "import json; print(json.load(open('/tmp/ref.json'))['referralCode'])")
 echo "  (referralCode: $REF_CODE)"
 code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/invite/$REF_CODE")
-check "招待着地ページ /invite/:code" "200" "$code"
+check "招待着地ページはv5で廃止→404" "404" "$code"
 # 招待経由で新規登録
 curl -s -c /tmp/cookies3.txt -o /dev/null -X POST "$BASE/api/auth/signup" -H "Content-Type: application/json" \
   -d "{\"email\":\"invited@example.com\",\"password\":\"password123\",\"familyName\":\"招待\",\"givenName\":\"次郎\",\"birthDate\":\"2000-01-01\",\"displayName\":\"じろう\",\"referralCode\":\"$REF_CODE\"}"
@@ -238,17 +257,22 @@ invited_pts=$(PGPASSWORD=itomachi_dev psql -h 127.0.0.1 -U itomachi -d itomachi 
   "SELECT pb.balance FROM point_balances pb JOIN users u ON u.id = pb.\"userId\" WHERE u.email='invited@example.com';")
 check "被招待側に1ポイント付与" "1" "$invited_pts"
 
-echo "===== P2-7. ポイント消費チェーン(無料枠切れ→ポイント→クレジット) ====="
-# phase2ユーザーは既に2回消費(相性+なし)。残り無料枠を使い切る
-for i in 1 2 3 4; do
-  curl -s -b $JAR2 -o /dev/null -X POST "$BASE/api/chat" -H "Content-Type: application/json" \
-    -d '{"category":"TODAY","message":"追加の質問'$i'"}'
+echo "===== P2-7. ポイント消費チェーン(v5: 有料会員のみ 枠切れ→ポイント→クレジット) ====="
+# v5仕様: 無料会員は枠切れ後ポイントがあってもサブスク誘導(402)。有料化してから検証する
+P2_ID=$(PGPASSWORD=itomachi_dev psql -h 127.0.0.1 -U itomachi -d itomachi -tA -c \
+  "SELECT id FROM users WHERE email='phase2@example.com'")
+PGPASSWORD=itomachi_dev psql -h 127.0.0.1 -U itomachi -d itomachi -c \
+  "INSERT INTO subscriptions (id, \"userId\", status, \"planPriceJpy\", \"currentPeriodEnd\", \"createdAt\", \"updatedAt\")
+   VALUES (gen_random_uuid()::text, '$P2_ID', 'active', 980, now() + interval '30 days', now(), now())"
+# 有料枠(5回/日)が尽きるまで投げ続けると、尽きた瞬間にポイント(残高1)が自動消費されusedPoint=Trueが返る
+used_point=None
+for i in 1 2 3 4 5 6 7 8; do
+  res=$(curl -s -b $JAR2 -X POST "$BASE/api/chat" -H "Content-Type: application/json" \
+    -d '{"category":"TODAY","message":"追加の質問'$i'"}')
+  up=$(echo "$res" | python3 -c "import json,sys; print(json.load(sys.stdin).get('usedPoint'))" 2>/dev/null)
+  if [ "$up" = "True" ]; then used_point=True; break; fi
 done
-# 無料枠5回を超えた次の1回はポイント(残高1)で通るはず
-res=$(curl -s -b $JAR2 -X POST "$BASE/api/chat" -H "Content-Type: application/json" \
-  -d '{"category":"TODAY","message":"ポイントで質問"}')
-used_point=$(echo "$res" | python3 -c "import json,sys; print(json.load(sys.stdin).get('usedPoint'))")
-check "無料枠切れ→ポイント自動消費" "True" "$used_point"
+check "有料会員: 枠切れ→ポイント自動消費" "True" "$used_point"
 # ポイントも尽きた次は402
 code=$(curl -s -b $JAR2 -o /dev/null -w "%{http_code}" -X POST "$BASE/api/chat" \
   -H "Content-Type: application/json" -d '{"category":"TODAY","message":"もう無理なはず"}')

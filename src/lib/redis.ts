@@ -87,7 +87,8 @@ function createRedis(): RedisLike {
 
 export const redis: RedisLike = createRedis();
 
-const DAILY_FREE_LIMIT = 5;
+const DAILY_FREE_LIMIT = 5; // 有料会員の1日あたり質問回数
+export const FREE_MEMBER_DAILY_LIMIT = 1; // 無料会員は1回まで(UI仕様v5 2026-07-06)
 
 function todayKey(userId: string) {
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (JST変換は本番でタイムゾーン処理を追加すること)
@@ -98,7 +99,10 @@ function todayKey(userId: string) {
  * 無料利用回数を1消費する。上限に達している場合は false を返す。
  * カウント粒度は「質問単位で合算5回」(CL4要件参照)。
  */
-export async function consumeDailyFreeQuota(userId: string): Promise<{
+export async function consumeDailyFreeQuota(
+  userId: string,
+  limit: number = DAILY_FREE_LIMIT
+): Promise<{
   allowed: boolean;
   remaining: number;
 }> {
@@ -108,16 +112,24 @@ export async function consumeDailyFreeQuota(userId: string): Promise<{
     // 初回のみTTLを設定(日付が変わったら自動リセット)
     await redis.expire(key, 60 * 60 * 26); // 26時間(タイムゾーンのズレ吸収のバッファ込み)
   }
-  if (count > DAILY_FREE_LIMIT) {
+  if (count > limit) {
+    // 超過分は実行されないためカウントを戻す。
+    // こうしないと「無料会員で402→その後サブスク加入」の際に、
+    // 402時の空振りincrが有料枠(5回)を目減りさせてしまう(2026-07-06修正)。
+    const current = Number((await redis.get<number>(key)) ?? 0);
+    if (current > 0) await redis.set(key, current - 1, { ex: 60 * 60 * 26 });
     return { allowed: false, remaining: 0 };
   }
-  return { allowed: true, remaining: DAILY_FREE_LIMIT - count };
+  return { allowed: true, remaining: limit - count };
 }
 
-export async function getRemainingDailyFreeQuota(userId: string): Promise<number> {
+export async function getRemainingDailyFreeQuota(
+  userId: string,
+  limit: number = DAILY_FREE_LIMIT
+): Promise<number> {
   const key = todayKey(userId);
   const count = Number((await redis.get<number>(key)) ?? 0);
-  return Math.max(0, DAILY_FREE_LIMIT - count);
+  return Math.max(0, limit - count);
 }
 
 /**

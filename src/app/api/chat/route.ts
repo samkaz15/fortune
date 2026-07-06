@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUserId, AuthRequiredError } from "@/lib/auth";
-import { consumeDailyFreeQuota, refundDailyFreeQuota } from "@/lib/redis";
+import { consumeDailyFreeQuota, refundDailyFreeQuota, FREE_MEMBER_DAILY_LIMIT } from "@/lib/redis";
 import { trackEvent } from "@/lib/analytics";
 import { acquireGenerationLock, releaseGenerationLock } from "@/lib/redis";
 import { generateFortune } from "@/lib/fortune-engine";
@@ -96,10 +96,25 @@ export async function POST(req: NextRequest) {
   // ---- 1. 利用回数 / ポイント / クレジットの判定 ----
   // 消費順序: 無料枠(1日5回) → ポイント(紹介報酬等) → 追加クレジット(有料)
   // 有償で購入したクレジットを最後に温存するのがユーザーにとって最も損のない順序のため。
-  const quota = await consumeDailyFreeQuota(userId);
+  // 会員仕様v5(2026-07-06): 無料会員=1回/日、有料会員=5回/日。
+  // 超過後は 有料会員のみ追加クレジット(5回300円パック)で継続できる。
+  const activeSub = await prisma.subscription.findFirst({ where: { userId, status: "active" } });
+  const isSubscribed = Boolean(activeSub);
+  const quota = await consumeDailyFreeQuota(userId, isSubscribed ? undefined : FREE_MEMBER_DAILY_LIMIT);
   let usedCredit = false;
   let usedPoint = false;
   if (!quota.allowed) {
+    if (!isSubscribed) {
+      // 無料会員: クレジット消費はさせず「もっと占う」(サブスク)へ誘導する
+      return NextResponse.json(
+        {
+          error: "UPGRADE_REQUIRED",
+          message: "無料の質問は本日分を使い切りました。「もっと占う」で続きが聞けます。",
+          cta: { label: "もっと占う", note: "※初月500円 月額980円", href: "/plans" },
+        },
+        { status: 402 }
+      );
+    }
     const pointBalance = await prisma.pointBalance.findUnique({ where: { userId } });
     if (pointBalance && pointBalance.balance > 0) {
       await prisma.$transaction([
@@ -111,7 +126,11 @@ export async function POST(req: NextRequest) {
       const creditBalance = await prisma.creditBalance.findUnique({ where: { userId } });
       if (!creditBalance || creditBalance.balance <= 0) {
         return NextResponse.json(
-          { error: "QUOTA_EXCEEDED", message: "本日の無料分を使い切りました。追加クレジットをご利用ください。" },
+          {
+            error: "QUOTA_EXCEEDED",
+            message: "本日の5回分を使い切りました。追加の質問は5回300円で購入できます。",
+            cta: { label: "追加5回を購入する(¥300)", href: "/plans#credits" },
+          },
           { status: 402 }
         );
       }

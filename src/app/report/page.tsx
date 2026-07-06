@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ScoreOrb } from "@/components/ScoreOrb";
+import {GlassMosaic, ScrollProgress, ShareRow, AffSlot } from "@/components/ui-common";
 
 interface Report {
   reportDate: string;
@@ -14,6 +15,7 @@ interface Report {
   advice: string;
   todayAction: string;
   remainingFreeQuota?: number;
+  isSubscribed?: boolean;
 }
 
 /**
@@ -24,11 +26,15 @@ export default function ReportPage() {
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<{ message: string; href: string; label: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<"today" | "week" | "month" | "nextMonth">("today");
 
   useEffect(() => {
     // 位置情報は任意(拒否されてもレポートは生成される)
+    setLoading(true);
     const fetchReport = (coords?: { lat: number; lon: number }) => {
-      const qs = coords ? `?lat=${coords.lat}&lon=${coords.lon}` : "";
+      const qs = coords
+        ? `?period=${period}&lat=${coords.lat}&lon=${coords.lon}`
+        : `?period=${period}`;
       fetch(`/api/report/today${qs}`)
         .then(async (res) => {
           if (res.status === 401) {
@@ -54,7 +60,7 @@ export default function ReportPage() {
     } else {
       fetchReport();
     }
-  }, []);
+  }, [period]);
 
   if (loading) {
     return <DramaticLoading />;
@@ -75,7 +81,21 @@ export default function ReportPage() {
 
   return (
     <div className="flex flex-col gap-6 px-5 pt-4 pb-8">
-      <h1 className="font-display text-lg text-paper-50">今日の意思決定レポート</h1>
+      <ScrollProgress />
+      <h1 className="font-display text-lg text-paper-50">今日の運勢</h1>
+      <p className="mt-1 text-center text-[11px] text-paper-500">今日の運勢を占って自分を確認</p>
+      {/* 期間タブ(UI仕様v5): 同UI・同ロジック。有料会員のみ全文、無料部分以降はモザイク */}
+      <div className="mt-3 grid grid-cols-4 gap-1.5">
+        {(["today", "week", "month", "nextMonth"] as const).map((p) => (
+          <button
+            key={p}
+            onClick={() => setPeriod(p)}
+            className={`rounded-full border py-1.5 text-[11px] font-bold transition ${period === p ? "border-gold-500 bg-gold-500/10 text-gold-400" : "border-ink-700 text-paper-400"}`}
+          >
+            {p === "today" ? "今日" : p === "week" ? "今週" : p === "month" ? "今月" : "来月"}
+          </button>
+        ))}
+      </div>
 
       {/* ① 運勢スコア */}
       <section className="flex flex-col items-center gap-2">
@@ -112,17 +132,33 @@ export default function ReportPage() {
         </ul>
       </section>
 
-      {/* ⑤ 総合アドバイス */}
-      <section className="rounded-card border border-ink-700 bg-ink-900/50 p-5">
-        <h2 className="mb-2 text-xs font-bold text-paper-400">糸町の少年からのアドバイス</h2>
-        <p className="text-sm leading-relaxed text-paper-100">{report.advice}</p>
-      </section>
+      <AffSlot label="AD SLOT 2" />
 
-      {/* ⑥ 今日やるべき行動(1つだけ) */}
-      <section className="rounded-card border-2 border-gold-500 bg-ink-900/70 p-5 text-center">
-        <h2 className="mb-2 text-xs font-bold text-gold-400">今日やるべき、たった1つのこと</h2>
-        <p className="font-display text-base leading-relaxed text-paper-50">{report.todayAction}</p>
-      </section>
+      {/* ⑤⑥ 詳細部: 有料会員のみ全文。無料/非会員はGlassモザイク(UI仕様v5) */}
+      {report.isSubscribed ? (
+        <>
+          <section className="rounded-card border border-ink-700 bg-ink-900/50 p-5">
+            <h2 className="mb-2 text-xs font-bold text-paper-400">糸町の少年からのアドバイス</h2>
+            <p className="text-sm leading-relaxed text-paper-100">{report.advice}</p>
+          </section>
+          <section className="rounded-card border-2 border-gold-500 bg-ink-900/70 p-5 text-center">
+            <h2 className="mb-2 text-xs font-bold text-gold-400">今日やるべき、たった1つのこと</h2>
+            <p className="font-display text-base leading-relaxed text-paper-50">{report.todayAction}</p>
+          </section>
+        </>
+      ) : (
+        <GlassMosaic
+          message="ここから先(アドバイスと、やるべきたった1つのこと)は会員限定です。"
+          ctaLabel="もっと占う"
+          ctaHref="/plans"
+          note="※初月500円 月額980円"
+        >
+          <p className="text-sm leading-relaxed">{report.advice}</p>
+          <p className="mt-3 text-sm leading-relaxed">{report.todayAction}</p>
+        </GlassMosaic>
+      )}
+
+      <ShareRow text={`今日の運勢は${report.score}点。「${report.keywords.userTheme}」の日 — 糸町の少年`} />
 
       {/* CV1: ここから先の核心(モザイク寸止め) + CV3: 感情CTA */}
       <section className="relative overflow-hidden rounded-card border border-gold-500/40" style={{ minHeight: 210 }}>

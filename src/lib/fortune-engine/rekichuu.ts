@@ -68,7 +68,40 @@ export function calcRekichuu(date: Date): RekichuuResult {
   if (ICHIRYU[sm]?.includes(branch)) good.push("一粒万倍日");
   if (DAIMYO.has(kanshi)) good.push("大明日");
   if (BOSO[sz]?.includes(branch)) good.push("母倉日");
+  // ---- UI仕様v5で追加した吉日(重複判定は呼び出し側でgood配列として自然に共存) ----
+  if (branch === "寅") good.push("寅の日"); // 金運(千里を往って千里を還る)
+  if (kanshi === "己巳") good.push("己巳の日"); // 弁財天の縁日
+  if (kanshi === "甲子") good.push("甲子の日"); // 六十干支の始まり
+  const solar = solarTerm(date);
+  if (solar) good.push(solar); // 春分/秋分/夏至/冬至
+  if (isFushoju(date)) bad.push("不成就日");
   if (JUSHI[sm - 1] === branch) bad.push("受死日");
   if (JISSHI[sm - 1] === branch) bad.push("十死日");
   return { kanshi, stem, branch, good, bad };
+}
+
+/** 二至二分(春分/夏至/秋分/冬至)。天文計算の固定日近似(±1日の年差は許容) */
+function solarTerm(date: Date): string | null {
+  const m = date.getMonth() + 1;
+  const d = date.getDate();
+  if (m === 3 && d === 20) return "春分";
+  if (m === 6 && d === 21) return "夏至";
+  if (m === 9 && d === 23) return "秋分";
+  if (m === 12 && d === 22) return "冬至";
+  return null;
+}
+
+/**
+ * 不成就日の簡易近似。本来は旧暦8日周期(朔日基準)だが、旧暦変換を持たないため
+ * 新月周期(29.53日)から朔日を推定して8日周期を刻む近似実装。
+ * 玄空大卦択日法・烏兎太陽択日法は択日(個別日選定)の高度体系のため、
+ * パーソナル判定(fengshui-calendar側の四柱×日干支スコア)で代替している。
+ */
+function isFushoju(date: Date): boolean {
+  const SYNODIC = 29.530588853 * 86_400_000;
+  const KNOWN_NEW_MOON = Date.UTC(2000, 0, 6, 18, 14); // 2000-01-06の朔
+  const t = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const sinceNew = ((t - KNOWN_NEW_MOON) % SYNODIC + SYNODIC) % SYNODIC;
+  const lunarDay = Math.floor(sinceNew / 86_400_000); // 旧暦日の近似(0=朔)
+  return lunarDay % 8 === 2; // 3日・11日・19日・27日型の近似
 }

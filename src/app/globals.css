@@ -37,3 +37,24 @@ body {
 .bg-lantern-gradient {
   background: radial-gradient(120% 140% at 50% 0%, #2a2a52 0%, #1e1e3d 45%, #101026 100%);
 }
+
+/* UI仕様v5: 登録画面の入力枠はみ出し対策(date/time等のUAスタイルによる幅超過を防ぐ) */
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(16, 16, 38, 0.8);
+  border: 1.5px solid #33335c;
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: #f7f3e9;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+.input:focus {
+  border-color: #d9a62e;
+}
