@@ -13,6 +13,11 @@ export default function TopPage() {
   return (
     <div className="flex flex-col gap-8 px-5">
       <section className="flex flex-col items-center gap-4 pt-4 text-center">
+        {/* OSのライト/ダーク設定で画像を切替(CEO指定 2026-07-06: ライト=朝/ダーク=夜) */}
+        <picture className="block w-full overflow-hidden rounded-card border border-ink-700 shadow-lantern">
+          <source srcSet="/character/home_light.jpg" media="(prefers-color-scheme: light)" />
+          <img src="/character/home_dark.jpg" alt="糸町の少年" className="h-40 w-full object-cover" />
+        </picture>
         <p className="font-display text-sm tracking-[0.3em] text-gold-500">ITOMACHI NO SHONEN</p>
         <h1 className="font-display text-3xl leading-snug text-paper-50">
           <HomeGreeting />

@@ -34,12 +34,34 @@ export interface SakanaAIResponse {
 
 const SAKANA_AI_ENDPOINT = process.env.SAKANA_AI_API_ENDPOINT ?? "";
 const SAKANA_AI_API_KEY = process.env.SAKANA_AI_API_KEY ?? "";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
+const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
 
+/**
+ * LLM呼び出しの3段フォールバック(CEO指示 2026-07-06):
+ *   1. Sakana AI(キー+エンドポイント設定時)
+ *   2. OpenAI(Sakana未設定または失敗時。コスト超過時のスイッチ先)
+ *   3. 開発用モック(どちらも使えない時。サービスは止めない)
+ */
 export async function callSakanaAI(req: SakanaAIRequest): Promise<SakanaAIResponse> {
-  if (!SAKANA_AI_API_KEY || !SAKANA_AI_ENDPOINT) {
-    return mockSakanaAIResponse(req);
+  if (SAKANA_AI_API_KEY && SAKANA_AI_ENDPOINT) {
+    try {
+      return await callSakanaAIRaw(req);
+    } catch (e) {
+      console.error("[llm] Sakana AI failed, falling back:", e instanceof Error ? e.message : e);
+    }
   }
+  if (OPENAI_API_KEY) {
+    try {
+      return await callOpenAIFallback(req);
+    } catch (e) {
+      console.error("[llm] OpenAI fallback failed, using mock:", e instanceof Error ? e.message : e);
+    }
+  }
+  return mockSakanaAIResponse(req);
+}
 
+async function callSakanaAIRaw(req: SakanaAIRequest): Promise<SakanaAIResponse> {
   const res = await fetch(SAKANA_AI_ENDPOINT, {
     method: "POST",
     headers: {
@@ -68,6 +90,61 @@ export async function callSakanaAI(req: SakanaAIRequest): Promise<SakanaAIRespon
     summary: data.summary,
     nextActions: data.next_actions,
     overallScore: data.overall_score,
+  };
+}
+
+/**
+ * OpenAI Chat Completionsによる予備応答(構造はSakanaAIResponseに揃える)。
+ * 分析層(Layer0)+キャラ層(Layer1)のプロンプトを合成し、JSONで返させる。
+ */
+async function callOpenAIFallback(req: SakanaAIRequest): Promise<SakanaAIResponse> {
+  const system = [
+    req.analysisPrompt ?? "",
+    req.characterPrompt,
+    "",
+    "# 出力形式(厳守)",
+    '必ず次のJSONのみを返すこと: {"message": "チャット返信本文(キャラの言葉)", "summary": "1行要約", "next_actions": ["行動1", "行動2", "行動3"], "overall_score": 0-100の整数}',
+  ].join("\n");
+
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      response_format: { type: "json_object" },
+      temperature: 0.8,
+      messages: [
+        { role: "system", content: system },
+        {
+          role: "user",
+          content: JSON.stringify({
+            category: req.category,
+            signals: req.signals,
+            user_question: req.userQuestion,
+          }),
+        },
+      ],
+    }),
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!res.ok) throw new Error(`OpenAI request failed: ${res.status}`);
+  const data = await res.json();
+  const parsed = JSON.parse(data.choices?.[0]?.message?.content ?? "{}");
+  if (!parsed.message || !parsed.summary || !Array.isArray(parsed.next_actions)) {
+    throw new Error("OpenAI response schema mismatch");
+  }
+  return {
+    message: String(parsed.message),
+    summary: String(parsed.summary),
+    nextActions: [
+      String(parsed.next_actions[0] ?? ""),
+      String(parsed.next_actions[1] ?? ""),
+      String(parsed.next_actions[2] ?? ""),
+    ],
+    overallScore: Math.max(0, Math.min(100, Number(parsed.overall_score) || 50)),
   };
 }
 

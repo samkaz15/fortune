@@ -12,7 +12,7 @@
  * - 入札は確認モーダル経由(キャンセル不可同意+免責同意の2チェック必須)
  * - 現在価格/残り時間/自分の状態のみ5秒ポーリング(リロード不要・仕様書§リアルタイム更新)
  * - 残り時間はサーバー時刻(serverNow)基準で計算(クライアント時刻を信用しない)
- * - 終了後: 落札者には決済(Stripe/銀行振込)→決済完了後のみ予約画面へ
+ * - 終了後: 落札者には決済(Stripe)→決済完了後のみ予約画面へ(銀行振込はCEO判断で廃止 2026-07-06)
  */
 import { useEffect, useState, useCallback, useRef } from "react";
 
@@ -136,7 +136,7 @@ export default function AuctionPage() {
     }
   }
 
-  async function startPayment(method: "stripe" | "bank") {
+  async function startPayment(method: "stripe") {
     if (!ticket) return;
     setPending(true);
     const res = await fetch("/api/auction/pay", {
@@ -148,9 +148,6 @@ export default function AuctionPage() {
     setPending(false);
     if (res.ok && data.checkoutUrl) {
       window.location.href = data.checkoutUrl;
-    } else if (res.ok && data.method === "bank") {
-      setMsg({ type: "ok", text: data.instruction });
-      poll();
     } else {
       setMsg({ type: "err", text: "決済の開始に失敗しました。" });
     }
@@ -239,13 +236,6 @@ export default function AuctionPage() {
               className="w-full rounded-full bg-gold-500 py-3 text-sm font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1 active:shadow-none disabled:opacity-50"
             >
               カードで支払う({price.toLocaleString()}円)
-            </button>
-            <button
-              onClick={() => startPayment("bank")}
-              disabled={pending}
-              className="w-full rounded-full border border-ink-600 py-3 text-sm font-bold text-paper-200 active:translate-y-0.5 disabled:opacity-50"
-            >
-              銀行振込で支払う
             </button>
             <p className="text-center text-[10px] text-paper-500">決済が完了すると、日程予約にお進みいただけます</p>
           </div>
