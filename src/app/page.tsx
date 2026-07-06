@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ScoreOrb } from "@/components/ScoreOrb";
 import { PopularRanking } from "@/components/PopularRanking";
+import { HomeGreeting } from "@/components/HomeGreeting";
 
 /**
  * 画面遷移設計書「TOP(ホーム)」の実装。
@@ -14,9 +15,7 @@ export default function TopPage() {
       <section className="flex flex-col items-center gap-4 pt-4 text-center">
         <p className="font-display text-sm tracking-[0.3em] text-gold-500">ITOMACHI NO SHONEN</p>
         <h1 className="font-display text-3xl leading-snug text-paper-50">
-          大丈夫。
-          <br />
-          必ずうまくいく。
+          <HomeGreeting />
         </h1>
         <p className="max-w-[26ch] text-sm leading-relaxed text-paper-400">
           生年月日と名前、そして毎日の対話から。今日どう動けばいいかを、迷わず決められるレポートを届けます。

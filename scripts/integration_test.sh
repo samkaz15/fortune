@@ -183,6 +183,22 @@ check "通知評価バッチ実行→200" "200" "$code"
 evaluated=$(python3 -c "import json; d=json.load(open('/tmp/eval.json')); print(d['evaluated'] >= 1)")
 check "評価対象ユーザーが存在" "True" "$evaluated"
 
+echo "===== UX. 特設ページ・挨拶(本実装) ====="
+code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/home/greeting")
+check "GET /api/home/greeting →200" "200" "$code"
+code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/love")
+check "GET /love ページ→200" "200" "$code"
+code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/work")
+check "GET /work ページ→200" "200" "$code"
+code=$(curl -s -o /tmp/love.json -w "%{http_code}" -X POST "$BASE/api/love/reading" -H "Content-Type: application/json" -d '{"name":"糸子","partnerName":"太郎"}')
+check "POST /api/love/reading →200" "200" "$code"
+locked=$(python3 -c "import json;print(json.load(open('/tmp/love.json'))['deep']['locked'])")
+check "恋愛: 非会員は深層ロック" "True" "$locked"
+code=$(curl -s -o /tmp/work.json -w "%{http_code}" -X POST "$BASE/api/work/reading" -H "Content-Type: application/json" -d '{"name":"糸子","birthDate":"2000-01-01","situation":"少し疲れている"}')
+check "POST /api/work/reading →200" "200" "$code"
+locked=$(python3 -c "import json;print(json.load(open('/tmp/work.json'))['future']['locked'])")
+check "仕事: 非会員は将来相性ロック" "True" "$locked"
+
 echo "===== P2-4. 神社API(CL18) ====="
 # テスト用神社を投入
 SHRINE_ID=$(PGPASSWORD=itomachi_dev psql -h 127.0.0.1 -U itomachi -d itomachi -t -A -c \

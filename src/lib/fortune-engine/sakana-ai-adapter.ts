@@ -19,7 +19,8 @@ import path from "node:path";
 
 export interface SakanaAIRequest {
   category: string;
-  characterPrompt: string; // GPT2で設計するキャラクター口調プロンプト
+  characterPrompt: string; // キャラクター口調プロンプト(Layer1)
+  analysisPrompt?: string; // 占術分析の基礎プロンプト(Layer0)。2段構成の上流(UX8)
   signals: Record<string, unknown>; // 占術ロジックの出力一式
   userQuestion: string; // チャットでのユーザーの相談内容
 }
@@ -46,6 +47,8 @@ export async function callSakanaAI(req: SakanaAIRequest): Promise<SakanaAIRespon
       Authorization: `Bearer ${SAKANA_AI_API_KEY}`,
     },
     body: JSON.stringify({
+      // 2段構成(UX8): 分析層(Layer0)で客観分析→キャラ層(Layer1)が翻訳
+      analysis_prompt: req.analysisPrompt ?? null,
       system_prompt: req.characterPrompt,
       category: req.category,
       signals: req.signals,

@@ -27,6 +27,16 @@ function loadCharacterPrompt(): string {
 
 export const CHARACTER_PROMPT = loadCharacterPrompt();
 
+/** 占術分析の基礎プロンプト(Layer0・UX8)。Sakana連携時にキャラ層の上流で客観分析を行う。 */
+function loadAnalysisPrompt(): string | undefined {
+  try {
+    return readFileSync(path.join(process.cwd(), "prompts", "analysis", "occult_analysis_base.v1.md"), "utf-8");
+  } catch {
+    return undefined;
+  }
+}
+const ANALYSIS_PROMPT = loadAnalysisPrompt();
+
 export interface UserProfileInput {
   familyName: string;
   givenName: string;
@@ -115,6 +125,7 @@ export async function generateFortune(params: GenerateFortuneParams): Promise<Fo
   const aiResponse = await callSakanaAI({
     category,
     characterPrompt: CHARACTER_PROMPT,
+    analysisPrompt: ANALYSIS_PROMPT,
     userQuestion,
     signals: {
       seimei: seimeiScore ?? null,

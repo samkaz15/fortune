@@ -16,6 +16,8 @@ const MENU: { href: string; label: string; note?: string }[] = [
   { href: "/report", label: "今日のレポート", note: "毎朝の意思決定レポート" },
   { href: "/consult", label: "相談チャット", note: "糸町の少年と話す(1日5回無料)" },
   { href: "/calendar", label: "風水カレンダー", note: "あなたの開運日と注意日" },
+  { href: "/love", label: "恋愛・相性占い", note: "ふたりの関係を整理する" },
+  { href: "/work", label: "仕事・キャリア占い", note: "働き方の本質と中長期の流れ" },
   { href: "/auction", label: "トークション", note: "電話占いオークション" },
   { href: "/shrines", label: "縁のある神社", note: "今日の運気に合う参拝先" },
   { href: "/news", label: "お知らせ" },
