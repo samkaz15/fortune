@@ -8,13 +8,18 @@ export const dynamic = "force-dynamic";
 
 /** 今日のスコア: 本人の四柱wave(占いエンジン)。未ログインは日替わりの汎用値 */
 async function todayScore(): Promise<number> {
-  const userId = await getCurrentUserId();
-  if (userId) {
-    const p = await prisma.userProfile.findUnique({ where: { userId } });
-    if (p) return calculateShichu(p.birthDate).wave;
-  }
   const d = new Date();
-  return 55 + ((d.getDate() * 7 + d.getMonth() * 3) % 31); // 55-85の日替わり
+  const fallback = 55 + ((d.getDate() * 7 + d.getMonth() * 3) % 31);
+  try {
+    const userId = await getCurrentUserId();
+    if (userId) {
+      const p = await prisma.userProfile.findUnique({ where: { userId } });
+      if (p) return calculateShichu(p.birthDate).wave;
+    }
+  } catch {
+    /* DB/セッション不調でもホームは必ず表示する(全ページの入口のため) */
+  }
+  return fallback;
 }
 import { PopularRanking } from "@/components/PopularRanking";
 import { HomeGreeting } from "@/components/HomeGreeting";

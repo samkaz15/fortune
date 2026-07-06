@@ -15,8 +15,15 @@ export default async function MyPage() {
   const userId = await getCurrentUserId();
   if (!userId) redirect("/auth/login");
 
+  let avatarUrl: string | null = null;
+  try {
+    const av = (await prisma.userProfile.findUnique({ where: { userId }, select: { avatar: true } })) as { avatar?: string | null } | null;
+    avatarUrl = av?.avatar ?? null;
+  } catch {
+    /* avatar列未追加の本番でも落ちないようにする */
+  }
   const [profile, subscription, creditBalance, pointBalance, remainingFree, recentResults] = await Promise.all([
-    prisma.userProfile.findUnique({ where: { userId } }),
+    prisma.userProfile.findUnique({ where: { userId }, select: { displayName: true, name: true, birthDate: true } }),
     prisma.subscription.findUnique({ where: { userId } }),
     prisma.creditBalance.findUnique({ where: { userId } }),
     prisma.pointBalance.findUnique({ where: { userId } }),
@@ -32,7 +39,7 @@ export default async function MyPage() {
   return (
     <div className="flex flex-col gap-6 px-5 pt-4">
       <section className="flex items-center gap-4 rounded-card border border-ink-700 bg-ink-900/50 p-5">
-        <AvatarUploader initialAvatar={profile?.avatar ?? null} fallbackChar={profile?.displayName?.slice(0, 1) ?? "?"} />
+        <AvatarUploader initialAvatar={avatarUrl} fallbackChar={profile?.displayName?.slice(0, 1) ?? "?"} />
         <div>
           <p className="font-display text-base text-paper-50">{profile?.displayName ?? "ゲスト"}</p>
           <p className="text-xs text-paper-400">

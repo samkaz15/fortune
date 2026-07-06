@@ -8,13 +8,24 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ loggedIn: false });
-  const profile = await prisma.userProfile.findUnique({
-    where: { userId },
-    select: { displayName: true, avatar: true },
-  });
-  return NextResponse.json({
-    loggedIn: true,
-    displayName: profile?.displayName ?? null,
-    avatar: profile?.avatar ?? null,
-  });
+  // avatar列が本番DBに未追加でも落ちないよう防御(列追加SQL適用前の互換性)
+  let displayName: string | null = null;
+  let avatar: string | null = null;
+  try {
+    const profile = await prisma.userProfile.findUnique({
+      where: { userId },
+      select: { displayName: true, avatar: true },
+    });
+    displayName = profile?.displayName ?? null;
+    avatar = profile?.avatar ?? null;
+  } catch {
+    // avatarカラム未追加の環境: displayNameだけ取得を試みる
+    try {
+      const p2 = await prisma.userProfile.findUnique({ where: { userId }, select: { displayName: true } });
+      displayName = p2?.displayName ?? null;
+    } catch {
+      /* noop */
+    }
+  }
+  return NextResponse.json({ loggedIn: true, displayName, avatar });
 }
