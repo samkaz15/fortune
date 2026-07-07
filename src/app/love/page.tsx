@@ -6,7 +6,7 @@
  * 表層(安心)→中層(気づき)→深層(ロック)。深層はサブスクで解放。
  */
 import { useState } from "react";
-import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA, DramaticLoading, withMinimumDuration, AffSlot } from "@/components/ui-common";
+import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA, DramaticLoading, withMinimumDuration, AffSlot, PrimaryButton } from "@/components/ui-common";
 
 interface Reading {
   score: number;
@@ -77,7 +77,7 @@ export default function LovePage() {
               <input value={name} onChange={(e) => setName(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-rose-400" placeholder="糸子" />
               <label className="mb-1 block text-[11px] font-bold text-paper-100">相手の名前<span className="ml-1 font-normal text-paper-500">名前だけでOK</span></label>
               <input value={partnerName} onChange={(e) => setPartnerName(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-rose-400" placeholder="太郎" />
-              <button onClick={run} disabled={!name || !partnerName || submitting} className="w-full rounded-full bg-gold-500 py-3.5 text-sm font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1 active:shadow-none disabled:opacity-40">相性を占う</button>
+              <PrimaryButton onClick={run} disabled={!name || !partnerName || submitting}>相性を占う</PrimaryButton>
             </div>
 
             <AffSlot label="AFFILIATE SLOT AREA A" />
@@ -146,7 +146,7 @@ export default function LovePage() {
                   <div className="p-5 text-sm leading-relaxed text-paper-300 blur-[7px] select-none">ふたりの間で最初にすれ違いが生まれたのは、実は最近ではありません。相手が「言わないでいること」には理由があって、それは——</div>
                   <div className="absolute inset-0 flex flex-col items-center justify-end bg-gradient-to-b from-transparent via-ink-950/75 to-ink-950/95 p-5 text-center">
                     <p className="mb-3 text-[11px] font-bold text-rose-300">この関係で一番重要な「すれ違いの原因」は、まだここには表示されていません。</p>
-                    <a href="/plans" className="w-full rounded-full bg-gold-500 py-3 text-xs font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1">{reading.deep.cta}</a>
+                    <PrimaryButton href="/plans" size="sm">{reading.deep.cta}</PrimaryButton>
                     <p className="mt-2 text-[9px] text-paper-500">{reading.deep.note}</p>
                   </div>
                 </>

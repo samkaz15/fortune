@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ScoreOrb } from "@/components/ScoreOrb";
-import { GlassMosaic, ScrollProgress, ShareRow, AffSlot, DramaticLoading } from "@/components/ui-common";
+import { GlassMosaic, ScrollProgress, ShareRow, AffSlot, DramaticLoading, PrimaryButton } from "@/components/ui-common";
 
 interface Report {
   reportDate: string;
@@ -195,9 +195,9 @@ export default function ReportPage() {
         </div>
         <div className="absolute inset-0 flex flex-col items-center justify-end bg-gradient-to-b from-transparent via-ink-950/70 to-ink-950/95 p-5 text-center">
           <p className="mb-3 text-[11px] font-bold text-gold-400">✦ ここから先は、直接お話しします</p>
-          <Link href="/consult" className="w-full rounded-full bg-gold-500 py-3 text-sm font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1">
+          <PrimaryButton href="/consult" size="sm" textSize="text-sm">
             この先を、僕から聞く
-          </Link>
+          </PrimaryButton>
           <p className="mt-2 text-[10px] text-paper-500">
             {typeof report.remainingFreeQuota === "number"
               ? `今日はあと ${report.remainingFreeQuota}回 話せます`

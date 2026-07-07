@@ -6,7 +6,7 @@
  * 無料: 本質＋中長期＋今日の行動 / 有料: 将来の相性を業界×部署で特定（ロック）
  */
 import { useState } from "react";
-import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA, DramaticLoading, withMinimumDuration } from "@/components/ui-common";
+import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA, DramaticLoading, withMinimumDuration, PrimaryButton } from "@/components/ui-common";
 
 type Situation = "うまくいっている" | "少し疲れている" | "判断に迷っている" | "環境を変えたい";
 
@@ -72,7 +72,7 @@ export default function WorkPage() {
               <input value={name} onChange={(e) => setName(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-gold-500" placeholder="糸子" />
               <label className="mb-1 block text-[11px] font-bold text-paper-100">生年月日</label>
               <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-gold-500" />
-              <button onClick={run} disabled={!name || !birthDate || submitting} className="w-full rounded-full bg-gold-500 py-3.5 text-sm font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1 active:shadow-none disabled:opacity-40">仕事の流れを見る</button>
+              <PrimaryButton onClick={run} disabled={!name || !birthDate || submitting}>仕事の流れを見る</PrimaryButton>
             </div>
 
             <div className="my-6 flex h-[100px] items-center justify-center rounded-2xl border border-dashed border-ink-700/50 text-[9px] tracking-widest text-ink-600">
@@ -150,7 +150,7 @@ export default function WorkPage() {
                 <div className="absolute inset-0 flex flex-col items-center justify-end bg-gradient-to-b from-transparent via-ink-950/75 to-ink-950/95 p-5 text-center">
                   <p className="mb-1 text-[11px] font-bold text-paper-100">将来的に何と相性がいいのか——<br /><span className="text-gold-400">業界と、その中の部署</span>まで特定できています。</p>
                   <p className="mb-3 text-[10px] text-paper-500">この流れは一定期間続きます。ただし、次の転換点はまだ表示されていません。</p>
-                  <a href="/plans" className="w-full rounded-full bg-gold-500 py-3 text-xs font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1">{reading.future.cta}</a>
+                  <PrimaryButton href="/plans" size="sm">{reading.future.cta}</PrimaryButton>
                 </div>
               </div>
             ) : (

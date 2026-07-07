@@ -6,7 +6,7 @@
  * 結果: ①状態②傾向③注意1つ④行動1つ(Core Mapping Spec固定フォーマット)。深掘りはサブスク。
  */
 import { useState } from "react";
-import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA, AffSlot, DramaticLoading, withMinimumDuration } from "@/components/ui-common";
+import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA, AffSlot, DramaticLoading, withMinimumDuration, PrimaryButton } from "@/components/ui-common";
 
 interface Reading {
   name: string;
@@ -80,7 +80,7 @@ export default function SelfPage() {
             <input value={name} onChange={(e) => setName(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-gold-500" placeholder="糸子" />
             <label className="mb-1 block text-[11px] font-bold text-paper-100">生年月日</label>
             <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-gold-500" />
-            <button onClick={run} disabled={!name || !birthDate || submitting} className="w-full rounded-full bg-gold-500 py-3.5 text-sm font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1 active:shadow-none disabled:opacity-40">診断をはじめる</button>
+            <PrimaryButton onClick={run} disabled={!name || !birthDate || submitting}>診断をはじめる</PrimaryButton>
           </div>
 
           {/* 診断前の結果サンプル(無料版UIと同じ) */}

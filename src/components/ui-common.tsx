@@ -183,3 +183,44 @@ export async function withMinimumDuration<T>(task: Promise<T>, minMs = 2000): Pr
   return result;
 }
 
+/**
+ * プライマリCTAボタン(監査Phase2 Medium対応 2026-07-07新設)。
+ * 「灯籠の金」の疑似立体シャドウ(shadow-[0_4px_0_#8a6b25]+押下でtranslate-y)は
+ * self/love/work/report等9箇所に個別コピペされており、将来の一括変更が困難だった。
+ * hrefがあればLinkとして、なければbuttonとして振る舞う(既存の呼び出しパターンを両対応)。
+ */
+export function PrimaryButton({
+  children,
+  href,
+  onClick,
+  disabled,
+  size = "md",
+  textSize,
+  className = "",
+}: {
+  children: React.ReactNode;
+  href?: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  /** md=py-3.5(主要フォーム送信ボタン) / sm=py-3(結果画面内のCTA) */
+  size?: "md" | "sm";
+  /** サイズ既定のフォントサイズ(md=text-sm/sm=text-xs)を上書きしたい場合に指定 */
+  textSize?: "text-xs" | "text-sm";
+  className?: string;
+}) {
+  const py = size === "md" ? "py-3.5" : "py-3";
+  const resolvedTextSize = textSize ?? (size === "md" ? "text-sm" : "text-xs");
+  const base = `w-full rounded-full bg-gold-500 ${py} text-center ${resolvedTextSize} font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1 active:shadow-none disabled:opacity-40 ${className}`;
+  if (href) {
+    return (
+      <Link href={href} className={base}>
+        {children}
+      </Link>
+    );
+  }
+  return (
+    <button onClick={onClick} disabled={disabled} className={base}>
+      {children}
+    </button>
+  );
+}
