@@ -45,9 +45,19 @@ export default function ReportPage() {
             setError({ message: "先に名前と生年月日の登録が必要だよ。", href: "/auth/signup", label: "登録する" });
             return null;
           }
+          if (!res.ok) {
+            // 500等: クラッシュさせず再試行を案内(2026-07-07 障害対応)
+            setError({ message: "レポートの生成に失敗しました。少し時間をおいて、もう一度開いてみてください。", href: "/report", label: "再読み込み" });
+            return null;
+          }
           return res.json();
         })
-        .then((d) => d && setReport(d))
+        .then((d) => {
+          // 想定形かを検証してから表示(不正データでの真っ白クラッシュを防ぐ)
+          if (d && d.keywords && typeof d.score === "number") setReport(d);
+          else if (d) setError({ message: "レポートの生成に失敗しました。少し時間をおいて、もう一度開いてみてください。", href: "/report", label: "再読み込み" });
+        })
+        .catch(() => setError({ message: "通信に失敗しました。電波の良いところで再読み込みしてください。", href: "/report", label: "再読み込み" }))
         .finally(() => setLoading(false));
     };
 
