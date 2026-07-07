@@ -1,7 +1,7 @@
 # Code Quality Audit & Performance Audit & Technical Debt Audit(4. / 5. / 6.)
 
 作成日: 2026-07-07 / 静的コード解析ベース
-**2026-07-07 追記(Phase1完了・コミット8bde198)**: 未使用コード3件中2件(ChatWindow.tsx / itomachi_talk.png)を安全確認のうえ削除。`/api/fortune/result/[id]`は外部クライアントからの利用可能性を否定できず削除見送り。ScoreOrb・AffSlotをReact.memo化。詳細は各セクション内に取り消し線で反映。
+**2026-07-07 追記(Phase2完了・コミットce2be79)**: CTAボタン重複(Medium)をPrimaryButton共通コンポーネントで解消(self/love/work/report計5箇所)。useMemo追加の要否を全数調査した結果、計算コストの高い処理が実在せず「追加不要」と判断(過剰最適化の回避)。Low項目4件は削除リスクを優先し現状維持、方針は`docs/audit/04_phase2_completion_report.md`参照。
 
 ---
 
