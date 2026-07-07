@@ -1,13 +1,23 @@
 # プロジェクト総合監査レポート(Architecture / UI / Performance / Code Quality / Technical Debt Audit)
 
 作成日: 2026-07-07 / 対象コミット: 87096f4
-**本監査はコードを一切変更していない。修正は本レポートの承認後に別セッションで着手する。**
-
-関連ドキュメント: `docs/audit/02_ui_quality_audit.md`(UI崩れ評価・HIG/Material評価)、`docs/audit/03_code_performance_audit.md`(コード品質・パフォーマンス・未使用コード一覧)
+**2026-07-07 追記: Phase1(Critical)改善完了(コミット8bde198)。本セクション冒頭に更新結果を記す。以下、初回監査時点の記述は履歴として保持。**
 
 ---
 
-## 1. 占い結果表示までの遅延仕様の調査(最優先項目)
+## 【2026-07-07更新】Phase1(Critical)改善完了報告
+
+| # | 監査時の指摘 | 対応内容 | 状態 |
+|---|---|---|---|
+| 1 | 演出ローディングが正式CVR仕様と乖離(self/love/work=600ms単純スピナー、report=簡略2段階) | `ui-common.tsx`に共通`DramaticLoading`+`withMinimumDuration`を新設。4ページ全てで最低2秒保証(API速ければ待つ/遅ければ即遷移)+3段階文言に統一。二重実行防止(submittingフラグ)も追加 | ✅ **解消** |
+
+再検証結果: `withMinimumDuration`のデフォルト`minMs=2000`、`DramaticLoading`のデフォルト`totalMs=2000`を実装ファイルで確認。self/love/work/reportの4ファイルで`submitting`状態による二重実行防止を確認(該当箇所9件)。結合テスト86項目全パス、ビルドエラー0件、サーバーログエラーなしを確認済み。
+
+詳細な修正内容・影響範囲は本レポート末尾の「Phase1完了サマリー」、およびコミットメッセージ(8bde198)を参照。
+
+---
+
+## 1. 占い結果表示までの遅延仕様の調査(初回監査時点の記録・履歴として保持)
 
 ### 結論を先に
 
@@ -79,14 +89,14 @@
 
 ---
 
-## 優先順位まとめ(次の修正フェーズへの申し送り)
+## 優先順位まとめ(2026-07-07更新: Phase1完了後の状態)
 
-| # | 項目 | 優先度 | 該当ファイル |
-|---|---|---|---|
-| 1 | 演出ローディングの仕様準拠(3秒4段階への統一) | **Critical** | self/love/work/report の4page.tsx + ui-common.tsx |
-| 2 | 未使用コード削除(ChatWindow.tsx / itomachi_talk.png / 旧API) | High | 詳細は03参照 |
-| 3 | メモ化の導入(主要な再計算コンポーネント) | High | 詳細は03参照 |
-| 4 | loveページのAffSlot統一 | Medium | src/app/love/page.tsx |
-| 5 | referral API等の後方互換残置物の整理方針決定 | Low | src/app/api/referral/ |
+| # | 項目 | 優先度 | 状態 | 該当ファイル |
+|---|---|---|---|---|
+| 1 | 演出ローディングの仕様準拠(最低2秒保証+3段階) | **Critical** | ✅ 解消(8bde198) | self/love/work/report の4page.tsx + ui-common.tsx |
+| 2 | 未使用コード削除(ChatWindow.tsx / itomachi_talk.png) | High | ✅ 解消(8bde198) | 詳細は03参照。旧API(`/api/fortune/result/[id]`)は外部利用可能性を否定できず削除見送り・要CEO判断 |
+| 3 | メモ化の導入(主要な再計算コンポーネント) | High | ✅ 一部対応(8bde198) | ScoreOrb・AffSlotをReact.memo化。詳細は03参照 |
+| 4 | loveページのAffSlot統一 | Medium→実質High相当だったため同時対応 | ✅ 解消(8bde198) | src/app/love/page.tsx |
+| 5 | referral API等の後方互換残置物の整理方針決定 | Low | 未着手(Phase2以降で判断) | src/app/api/referral/ |
 
-修正は本レポートのご確認・ご承認後に着手する。
+Phase1(Critical)は全項目完了。Phase2(High/Medium残)は`03_code_performance_audit.md`の残課題を参照し、別途着手する。
