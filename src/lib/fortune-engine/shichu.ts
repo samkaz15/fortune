@@ -41,12 +41,23 @@ export function calculateShichu(birthDate: Date, targetDate: Date = new Date()):
   const branch = JUNISHI[idx % 12];
   const element = GOGYO_OF_JIKKAN[stem];
 
-  // 「今日の運気の波」は日柱の五行と、対象日(今日)の五行の相性で簡易算出(暫定ロジック)
+  // 「今日の運気の波」(2026-07-07修正): 五行5種のみでは粒度が粗く、
+  // 期間タブ(今日/今週/今月/来月)の代表日が同じ五行に当たると同一スコアになるバグがあった。
+  // 60干支の周期距離(0-30)を主軸にし、五行の相性を補正として加える2段構成に変更。
   const todayIdx = stemBranchIndexFromDate(targetDate);
   const todayElement = GOGYO_OF_JIKKAN[JIKKAN[todayIdx % 10]];
+
+  // 60干支の円環距離(0=同日相当・大吉 〜 30=正反対)
+  const cycleDiff = Math.abs(idx - todayIdx) % 60;
+  const cycleDistance = Math.min(cycleDiff, 60 - cycleDiff); // 0-30
+
+  // 五行の相性(相生・相剋)による補正: 同じ五行=+8、相剋(離れた関係)=-8
   const elementOrder = ["木", "火", "土", "金", "水"] as const;
-  const distance = Math.abs(elementOrder.indexOf(element) - elementOrder.indexOf(todayElement));
-  const wave = 100 - distance * 15; // 相生に近いほど高スコア(暫定)
+  const elementDistance = Math.abs(elementOrder.indexOf(element) - elementOrder.indexOf(todayElement));
+  const elementBonus = elementDistance === 0 ? 8 : elementDistance >= 3 ? -8 : 0;
+
+  // cycleDistance(0-30)を100-40のレンジへ線形マップし、五行補正を加える
+  const wave = Math.round(100 - (cycleDistance / 30) * 60 + elementBonus);
 
   const adviceMap: Record<string, string> = {
     木: "新しいことを始めるより、今ある計画を育てる意識で過ごすとうまくいく",
