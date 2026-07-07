@@ -80,7 +80,60 @@ export async function POST(req: NextRequest) {
     else skipped++;
   }
 
-  return NextResponse.json({ evaluated: users.length, sent, skipped });
+  // ---- リマインド通知(2026-07-07追加・リテンション改善・Marketing-079,080) ----
+  // その日まだ「今日の運勢」に触れていないアクティブユーザーへの夕方リマインド判定。
+  // GM3知見(高スコア日のみ通知でCTR維持)とは別軸の設計のため、通知頻度が過剰にならないよう
+  // 1日1回・「まだ未訪問」の場合のみ発火する条件にしている。
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+
+  let reminderSent = 0;
+  let reminderSkipped = 0;
+  for (const user of users) {
+    if (!user.profile) continue;
+    const setting = user.notifications;
+    if (!setting?.pushEnabled) continue;
+
+    const visitedToday = await prisma.analyticsEvent.findFirst({
+      where: {
+        userId: user.id,
+        name: { in: ["free_reading_completed", "report_generated"] },
+        createdAt: { gte: todayStart },
+      },
+      select: { id: true },
+    });
+    if (visitedToday) {
+      reminderSkipped++;
+      continue;
+    }
+
+    const hasWebPush = Boolean(setting.pushSubscription);
+    const hasLine = Boolean(user.lineUserId);
+    const channel = hasWebPush ? "web_push" : hasLine ? "line" : "none";
+    const reminderMessage = "今日はまだ話せてないね。少しだけ、覗いてみない?";
+
+    await prisma.notificationLog.create({
+      data: {
+        userId: user.id,
+        type: "daily_reminder",
+        score: null,
+        channel,
+        // TODO: 実配信にはWeb Push(VAPIDキー)/LINE Messaging API(チャネルアクセストークン)
+        // の認証情報が必要。本サンドボックスでは未提供のため判定・記録までを実装している。
+        // 認証情報投入後、worker側でstatus=sentのログを実際にPush配信するジョブへ接続すること。
+        status: channel === "none" ? "skipped_no_channel" : "sent",
+        message: reminderMessage,
+      },
+    });
+    if (channel !== "none") reminderSent++;
+    else reminderSkipped++;
+  }
+
+  return NextResponse.json({
+    evaluated: users.length,
+    scoreThreshold: { sent, skipped },
+    dailyReminder: { sent: reminderSent, skipped: reminderSkipped },
+  });
 }
 
 // Vercel CronはGETで叩くため同じハンドラをGETにも割り当てる

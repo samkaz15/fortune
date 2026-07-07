@@ -7,6 +7,7 @@ import { ReferralShare } from "@/components/ReferralShare";
 import { prisma } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/auth";
 import { getRemainingDailyFreeQuota } from "@/lib/redis";
+import { calculateStreak } from "@/lib/streak";
 
 /**
  * 画面遷移設計書「マイページ」の実装(CL11)。
@@ -34,7 +35,7 @@ export default async function MyPage() {
   }
   const invitedCount = await prisma.user.count({ where: { referredByUserId: userId } });
 
-  const [profile, subscription, creditBalance, pointBalance, remainingFree, recentResults] = await Promise.all([
+  const [profile, subscription, creditBalance, pointBalance, remainingFree, recentResults, streak] = await Promise.all([
     prisma.userProfile.findUnique({ where: { userId }, select: { displayName: true, name: true, birthDate: true } }),
     prisma.subscription.findUnique({ where: { userId } }),
     prisma.creditBalance.findUnique({ where: { userId } }),
@@ -46,6 +47,7 @@ export default async function MyPage() {
       take: 5,
       select: { id: true, summary: true, scoreOverall: true, createdAt: true },
     }),
+    calculateStreak(userId),
   ]);
 
   return (
@@ -59,6 +61,15 @@ export default async function MyPage() {
           </p>
         </div>
       </section>
+
+      {streak.currentStreak > 0 && (
+        <section className="flex items-center justify-center gap-2 rounded-card border border-gold-500/40 bg-gold-500/5 py-3 text-center">
+          <span className="text-2xl">🔥</span>
+          <p className="text-sm font-bold text-gold-400">
+            {streak.currentStreak}日連続で利用中
+          </p>
+        </section>
+      )}
 
       <section className="grid grid-cols-3 gap-2">
         <StatCard label="本日の残り" value={subscription?.status === "active" ? "∞" : `${remainingFree}回`} />
