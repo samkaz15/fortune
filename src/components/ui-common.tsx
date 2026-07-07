@@ -104,8 +104,9 @@ export function ShareRow({ text, title }: { text: string; title?: string }) {
   return (
     <div className="mt-4">
       <p className="mb-2 text-center text-[10px] font-bold tracking-widest text-paper-500">SHARE ｜ 結果をシェア</p>
-      <div className="flex justify-center gap-2">
+      <div className="flex flex-wrap justify-center gap-2">
         <a href={`https://twitter.com/intent/tweet?text=${enc(text)}&url=${enc(url)}`} target="_blank" rel="noreferrer" onClick={() => track("share", { platform: "x" })} className="rounded-full border border-ink-700 px-4 py-2 text-[11px] font-bold text-paper-200">X</a>
+        <a href={`https://www.threads.net/intent/post?text=${enc(`${text} ${url}`)}`} target="_blank" rel="noreferrer" onClick={() => track("share", { platform: "threads" })} className="rounded-full border border-ink-700 px-4 py-2 text-[11px] font-bold text-paper-200">Threads</a>
         <a href={`https://social-plugins.line.me/lineit/share?url=${enc(url)}&text=${enc(text)}`} target="_blank" rel="noreferrer" onClick={() => track("share", { platform: "line" })} className="rounded-full border border-ink-700 px-4 py-2 text-[11px] font-bold text-paper-200">LINE</a>
         {/* Instagram/TikTokは共有URLスキームが無いためネイティブ共有(アプリ選択)で対応 */}
         <button onClick={nativeShare} className="rounded-full border border-ink-700 px-4 py-2 text-[11px] font-bold text-paper-200">Instagram / TikTok</button>
