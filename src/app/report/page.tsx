@@ -92,6 +92,9 @@ export default function ReportPage() {
   return (
     <div className="flex flex-col gap-6 px-5 pt-4 pb-8">
       <ScrollProgress />
+      {/* 今日の運勢ヒーロー(CEO指定画像 2026-07-07) */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/character/report_hero.jpg" alt="糸町の少年" className="mb-3 h-36 w-full rounded-card border border-ink-700 object-cover shadow-lantern" style={{ objectPosition: "center 30%" }} />
       <h1 className="font-display text-lg text-paper-50">今日の運勢</h1>
       <p className="mt-1 text-center text-[11px] text-paper-500">今日の運勢を占って自分を確認</p>
       {/* 期間タブ(UI仕様v5): 同UI・同ロジック。有料会員のみ全文、無料部分以降はモザイク */}

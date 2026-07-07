@@ -1106,7 +1106,7 @@ function startFortune(panelId){
     document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.p===panelId));
     document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id===panelId));
     chatArea.scrollTop=0;
-  },3000);
+  },1900);
 }
 document.getElementById('backBtn').addEventListener('click',()=>showView('view-home'));
 showView('view-home');

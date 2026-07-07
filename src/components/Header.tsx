@@ -39,11 +39,25 @@ export function Header() {
   // 実セッション状態(CEO要求 2026-07-07: 人マークはログイン時マイページへ+設定画像/頭文字を表示)
   const [me, setMe] = useState<{ loggedIn: boolean; displayName: string | null; avatar: string | null }>({ loggedIn: false, displayName: null, avatar: null });
   useEffect(() => {
-    const load = () => fetch("/api/auth/me").then((r) => r.json()).then(setMe).catch(() => {});
+    // 体感速度改善(2026-07-07): セッション中はキャッシュを即時表示し、裏で最新化。
+    // ページ遷移ごとの待ちを無くす(stale-while-revalidate)
+    const cached = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("me") : null;
+    if (cached) {
+      try { setMe(JSON.parse(cached)); } catch { /* noop */ }
+    }
+    const load = () =>
+      fetch("/api/auth/me")
+        .then((r) => r.json())
+        .then((d) => {
+          setMe(d);
+          try { sessionStorage.setItem("me", JSON.stringify(d)); } catch { /* noop */ }
+        })
+        .catch(() => {});
     load();
-    window.addEventListener("avatar-updated", load); // マイページでの画像変更を即反映
+    window.addEventListener("avatar-updated", load);
     return () => window.removeEventListener("avatar-updated", load);
-  }, [pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const isLoggedIn = me.loggedIn;
 
   return (

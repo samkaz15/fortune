@@ -43,7 +43,7 @@ export default function LovePage() {
       body: JSON.stringify({ name, partnerName }),
     });
     const data = await res.json();
-    setTimeout(() => { setReading(data); setPhase("result"); window.scrollTo({ top: 0, behavior: "smooth" }); }, 1800);
+    setTimeout(() => { setReading(data); setPhase("result"); window.scrollTo({ top: 0, behavior: "smooth" }); }, 600); // 体感速度改善(2026-07-07): API取得済みのため演出は最低限に
   }
 
   const Meter = ({ label, v }: { label: string; v: number }) => (
