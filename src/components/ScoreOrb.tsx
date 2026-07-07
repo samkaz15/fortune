@@ -1,10 +1,15 @@
+import { memo } from "react";
+
 /**
  * このプロダクトの signature element(frontend-designスキルでいう"サイン")。
  * 「今日の運気」を月の満ち欠けに見立てた発光オーブで表現する。
  * TOP・診断結果・マイページなど、スコアが登場する箇所で一貫して使い、
  * 「糸町の少年といえばこの円」という視覚的な記名性を作る。
+ *
+ * React.memoでラップ(監査Phase1 High対応 2026-07-07): scoreとsizeのみに依存する
+ * 純粋な表示コンポーネントのため、親の無関係な状態更新による再計算を防ぐ。
  */
-export function ScoreOrb({ score, size = 120 }: { score: number; size?: number }) {
+export const ScoreOrb = memo(function ScoreOrb({ score, size = 120 }: { score: number; size?: number }) {
   const clamped = Math.max(0, Math.min(100, score));
   const glowOpacity = 0.25 + (clamped / 100) * 0.55;
 
@@ -33,4 +38,4 @@ export function ScoreOrb({ score, size = 120 }: { score: number; size?: number }
       </div>
     </div>
   );
-}
+});

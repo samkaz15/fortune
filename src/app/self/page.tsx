@@ -6,7 +6,7 @@
  * 結果: ①状態②傾向③注意1つ④行動1つ(Core Mapping Spec固定フォーマット)。深掘りはサブスク。
  */
 import { useState } from "react";
-import {GlassMosaic, ScrollProgress, ShareRow, FloatingCTA, AffSlot } from "@/components/ui-common";
+import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA, AffSlot, DramaticLoading, withMinimumDuration } from "@/components/ui-common";
 
 interface Reading {
   name: string;
@@ -32,21 +32,26 @@ export default function SelfPage() {
   const [birthDate, setBirthDate] = useState("");
   const [phase, setPhase] = useState<"input" | "loading" | "result">("input");
   const [r, setR] = useState<Reading | null>(null);
+  const [submitting, setSubmitting] = useState(false); // 二重実行防止(監査Phase1 Critical対応)
 
   async function run() {
-    if (!name || !birthDate) return;
+    if (!name || !birthDate || submitting) return;
+    setSubmitting(true);
     setPhase("loading");
-    const res = await fetch("/api/self/reading", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, birthDate }),
-    });
-    const data = await res.json();
-    setTimeout(() => {
+    try {
+      const data = await withMinimumDuration(
+        fetch("/api/self/reading", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, birthDate }),
+        }).then((res) => res.json())
+      );
       setR(data);
       setPhase("result");
       window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 600); // 体感速度改善(2026-07-07): API取得済みのため演出は最低限に
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -75,7 +80,7 @@ export default function SelfPage() {
             <input value={name} onChange={(e) => setName(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-gold-500" placeholder="糸子" />
             <label className="mb-1 block text-[11px] font-bold text-paper-100">生年月日</label>
             <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-gold-500" />
-            <button onClick={run} disabled={!name || !birthDate} className="w-full rounded-full bg-gold-500 py-3.5 text-sm font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1 active:shadow-none disabled:opacity-40">診断をはじめる</button>
+            <button onClick={run} disabled={!name || !birthDate || submitting} className="w-full rounded-full bg-gold-500 py-3.5 text-sm font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1 active:shadow-none disabled:opacity-40">診断をはじめる</button>
           </div>
 
           {/* 診断前の結果サンプル(無料版UIと同じ) */}
@@ -99,10 +104,7 @@ export default function SelfPage() {
       )}
 
       {phase === "loading" && (
-        <div className="py-32 text-center">
-          <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-2 border-ink-700 border-t-gold-500" />
-          <p className="text-xs text-paper-300">流れを整理しています、、</p>
-        </div>
+        <DramaticLoading messages={["名前と生年月日を、読み解いています、、", "本質の型と重ねています", "見えました。"]} />
       )}
 
       {phase === "result" && r && (

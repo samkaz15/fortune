@@ -6,7 +6,7 @@
  * 無料: 本質＋中長期＋今日の行動 / 有料: 将来の相性を業界×部署で特定（ロック）
  */
 import { useState } from "react";
-import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA } from "@/components/ui-common";
+import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA, DramaticLoading, withMinimumDuration } from "@/components/ui-common";
 
 type Situation = "うまくいっている" | "少し疲れている" | "判断に迷っている" | "環境を変えたい";
 
@@ -35,21 +35,26 @@ export default function WorkPage() {
   const situation: Situation = "判断に迷っている";
   const [phase, setPhase] = useState<"input" | "loading" | "result">("input");
   const [reading, setReading] = useState<Reading | null>(null);
+  const [submitting, setSubmitting] = useState(false); // 二重実行防止(監査Phase1 Critical対応)
 
   async function run() {
-    if (!name || !birthDate) return;
+    if (!name || !birthDate || submitting) return;
+    setSubmitting(true);
     setPhase("loading");
-    const res = await fetch("/api/work/reading", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, birthDate, situation }),
-    });
-    const data = await res.json();
-    setTimeout(() => {
+    try {
+      const data = await withMinimumDuration(
+        fetch("/api/work/reading", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, birthDate, situation }),
+        }).then((res) => res.json())
+      );
       setReading(data);
       setPhase("result");
       window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 600); // 体感速度改善(2026-07-07): API取得済みのため演出は最低限に
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -67,7 +72,7 @@ export default function WorkPage() {
               <input value={name} onChange={(e) => setName(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-gold-500" placeholder="糸子" />
               <label className="mb-1 block text-[11px] font-bold text-paper-100">生年月日</label>
               <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-gold-500" />
-              <button onClick={run} disabled={!name || !birthDate} className="w-full rounded-full bg-gold-500 py-3.5 text-sm font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1 active:shadow-none disabled:opacity-40">仕事の流れを見る</button>
+              <button onClick={run} disabled={!name || !birthDate || submitting} className="w-full rounded-full bg-gold-500 py-3.5 text-sm font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1 active:shadow-none disabled:opacity-40">仕事の流れを見る</button>
             </div>
 
             <div className="my-6 flex h-[100px] items-center justify-center rounded-2xl border border-dashed border-ink-700/50 text-[9px] tracking-widest text-ink-600">
@@ -100,10 +105,7 @@ export default function WorkPage() {
         )}
 
         {phase === "loading" && (
-          <div className="py-32 text-center">
-            <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-2 border-ink-700 border-t-gold-500" />
-            <p className="text-xs text-paper-300">流れを整理しています、、</p>
-          </div>
+          <DramaticLoading messages={["巡りを、整理しています、、", "本質と重ねています", "見えました。"]} />
         )}
 
         {phase === "result" && reading && (

@@ -7,7 +7,7 @@
  * - FloatingCTA: 全診断共通の追従ボタン(余白付きFloating Button)
  * - ShareRow: SNS共有(Instagram/X/TikTok/LINE)。Web Share API+各インテント
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import Link from "next/link";
 
 export function GlassMosaic({
@@ -111,10 +111,75 @@ export function ShareRow({ text, title }: { text: string; title?: string }) {
  * 上下40px余白、サイズ固定せず(横長/カード/画像/テキスト全対応の柔軟枠)。
  * サブスク導線を妨げない位置にのみ配置すること。
  */
-export function AffSlot({ label = "AD SLOT" }: { label?: string }) {
+/**
+ * アフィリエイト枠(UI仕様v5): 余白のみ確保・実装なし。
+ * 上下40px余白、サイズ固定せず(横長/カード/画像/テキスト全対応の柔軟枠)。
+ * サブスク導線を妨げない位置にのみ配置すること。
+ *
+ * React.memoでラップ(監査Phase1 High対応 2026-07-07): label(文字列)のみに依存する
+ * 純粋な表示コンポーネントで、全10ページ以上で繰り返し使われるため対象に選定。
+ */
+export const AffSlot = memo(function AffSlot({ label = "AD SLOT" }: { label?: string }) {
   return (
     <div className="my-10 flex min-h-[100px] w-full items-center justify-center rounded-2xl border border-dashed border-ink-700/40 text-[9px] tracking-[0.25em] text-ink-600">
       {label}
     </div>
   );
+});
+
+/**
+ * 演出ローディング(監査Phase1 Critical対応 2026-07-07 再実装)。
+ *
+ * 元仕様(docs/design/06_conversion/conversion_spec.md §5): 3秒・3段階テキスト+
+ * 目標勾配効果によるCVR施策。2026-07-07の速度改善時に誤って600msへ短縮してしまい、
+ * self/love/workでは元々未実装だった。今回、CEO指示(最低2秒保証・API遅延時は
+ * 応答後すぐ遷移)に合わせて再設計し、self/love/work/reportの4ページで共通化する。
+ *
+ * このコンポーネント自体は「与えられた時間だけメッセージを自動で切り替えて表示する」
+ * 純粋な表示部品。実際の最低表示時間の制御(API応答が早くても待つ/遅ければ待たない)は
+ * 呼び出し側のrun()関数が担う(withMinimumDuration参照)。
+ */
+export function DramaticLoading({
+  messages,
+  totalMs = 2000,
+  accentClassName = "border-t-gold-500",
+}: {
+  /** 表示するメッセージ(2〜3個推奨)。ページごとに実際の処理内容に即した文言にする(事実でない演出文言は使わない) */
+  messages: string[];
+  /** 全メッセージを表示しきるまでの合計時間(ms)。呼び出し側の最低保証時間と合わせる */
+  totalMs?: number;
+  /** スピナーのアクセント色クラス。ページ固有の視覚アイデンティティ(例: loveページのrose)を維持するため上書き可能 */
+  accentClassName?: string;
+}) {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    if (messages.length <= 1) return;
+    const perStep = totalMs / messages.length;
+    const timers = messages.slice(1).map((_, i) => setTimeout(() => setStep(i + 1), perStep * (i + 1)));
+    return () => timers.forEach(clearTimeout);
+  }, [messages, totalMs]);
+
+  return (
+    <div className="flex flex-col items-center gap-5 pt-32">
+      <div className={`h-16 w-16 animate-spin rounded-full border-2 border-ink-700 ${accentClassName}`} />
+      <p className="animate-pulse text-sm text-paper-200">{messages[Math.min(step, messages.length - 1)]}</p>
+    </div>
+  );
 }
+
+/**
+ * 「最低表示時間を保証しつつ、API応答が遅ければ待たずに結果を返す」実行ラッパー。
+ * - API応答が速い(例: 200ms) → 残り時間だけ待ってから解決(最低minMs秒は演出を見せる)
+ * - API応答が遅い(例: 4000ms) → 追加待機なしで即座に解決(取得後すぐ遷移)
+ * self/love/work/reportのrun()関数から共通で呼び出す。
+ */
+export async function withMinimumDuration<T>(task: Promise<T>, minMs = 2000): Promise<T> {
+  const startedAt = Date.now();
+  const result = await task;
+  const elapsed = Date.now() - startedAt;
+  if (elapsed < minMs) {
+    await new Promise((resolve) => setTimeout(resolve, minMs - elapsed));
+  }
+  return result;
+}
+

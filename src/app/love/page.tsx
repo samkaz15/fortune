@@ -6,7 +6,7 @@
  * 表層(安心)→中層(気づき)→深層(ロック)。深層はサブスクで解放。
  */
 import { useState } from "react";
-import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA } from "@/components/ui-common";
+import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA, DramaticLoading, withMinimumDuration, AffSlot } from "@/components/ui-common";
 
 interface Reading {
   score: number;
@@ -33,17 +33,26 @@ export default function LovePage() {
   const [partnerName, setPartnerName] = useState("");
   const [phase, setPhase] = useState<"input" | "loading" | "result">("input");
   const [reading, setReading] = useState<Reading | null>(null);
+  const [submitting, setSubmitting] = useState(false); // 二重実行防止(監査Phase1 Critical対応)
 
   async function run() {
-    if (!name || !partnerName) return;
+    if (!name || !partnerName || submitting) return;
+    setSubmitting(true);
     setPhase("loading");
-    const res = await fetch("/api/love/reading", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, partnerName }),
-    });
-    const data = await res.json();
-    setTimeout(() => { setReading(data); setPhase("result"); window.scrollTo({ top: 0, behavior: "smooth" }); }, 600); // 体感速度改善(2026-07-07): API取得済みのため演出は最低限に
+    try {
+      const data = await withMinimumDuration(
+        fetch("/api/love/reading", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, partnerName }),
+        }).then((res) => res.json())
+      );
+      setReading(data);
+      setPhase("result");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const Meter = ({ label, v }: { label: string; v: number }) => (
@@ -68,10 +77,10 @@ export default function LovePage() {
               <input value={name} onChange={(e) => setName(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-rose-400" placeholder="糸子" />
               <label className="mb-1 block text-[11px] font-bold text-paper-100">相手の名前<span className="ml-1 font-normal text-paper-500">名前だけでOK</span></label>
               <input value={partnerName} onChange={(e) => setPartnerName(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-rose-400" placeholder="太郎" />
-              <button onClick={run} disabled={!name || !partnerName} className="w-full rounded-full bg-gold-500 py-3.5 text-sm font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1 active:shadow-none disabled:opacity-40">相性を占う</button>
+              <button onClick={run} disabled={!name || !partnerName || submitting} className="w-full rounded-full bg-gold-500 py-3.5 text-sm font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1 active:shadow-none disabled:opacity-40">相性を占う</button>
             </div>
 
-            <div className="my-6 flex h-[140px] items-center justify-center rounded-2xl border border-dashed border-ink-700/50 text-[9px] tracking-widest text-ink-600">AFFILIATE SLOT AREA A</div>
+            <AffSlot label="AFFILIATE SLOT AREA A" />
 
             <div className="rounded-card border border-ink-700 bg-ink-900/70 p-5">
               <p className="mb-3 text-[10px] font-bold tracking-widest text-rose-300">READING ｜ この占いでわかること</p>
@@ -99,10 +108,10 @@ export default function LovePage() {
         )}
 
         {phase === "loading" && (
-          <div className="py-32 text-center">
-            <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-2 border-ink-700 border-t-rose-400" />
-            <p className="text-xs text-paper-300">ふたりの糸をたどっています、、</p>
-          </div>
+          <DramaticLoading
+            messages={["ふたりの糸を、たどっています、、", "相性を重ねています", "見えました。"]}
+            accentClassName="border-t-rose-400"
+          />
         )}
 
         {phase === "result" && reading && (
@@ -122,7 +131,7 @@ export default function LovePage() {
             <div className="mb-4 rounded-card border border-ink-700 bg-ink-900/70 p-5"><p className="text-[9px] font-bold tracking-widest text-rose-300">01 ｜ 現在の関係性</p><p className="mt-2 text-sm leading-relaxed text-paper-100">{reading.layers.surface}</p></div>
             <div className="mb-4 rounded-card border border-ink-700 bg-ink-900/70 p-5"><p className="text-[9px] font-bold tracking-widest text-rose-300">02 ｜ 相手の心理</p><p className="mt-2 text-sm leading-relaxed text-paper-100">{reading.layers.partner}</p></div>
 
-            <div className="my-4 flex h-[100px] items-center justify-center rounded-2xl border border-dashed border-ink-700/50 text-[9px] tracking-widest text-ink-600">AFFILIATE SLOT AREA B</div>
+            <AffSlot label="AFFILIATE SLOT AREA B" />
 
             <div className="mb-4 rounded-card border border-ink-700 bg-ink-900/70 p-5"><p className="text-[9px] font-bold tracking-widest text-rose-300">03 ｜ ふたりの流れ</p><p className="mt-2 text-sm leading-relaxed text-paper-100">{reading.layers.flow}</p></div>
             <div className="mb-4 rounded-card border border-ink-700 bg-ink-900/70 p-5"><p className="text-[9px] font-bold tracking-widest text-rose-300">04 ｜ 次の一手</p><p className="mt-2 text-sm leading-relaxed text-paper-100">{reading.layers.action}</p></div>
@@ -147,7 +156,7 @@ export default function LovePage() {
             </div>
 
             <ShareRow text={`ふたりの相性は${reading.score}点でした — 糸町の少年`} />
-            <div className="my-6 flex h-[100px] items-center justify-center rounded-2xl border border-dashed border-ink-700/50 text-[9px] tracking-widest text-ink-600">AFFILIATE SLOT AREA C</div>
+            <AffSlot label="AFFILIATE SLOT AREA C" />
             <div className="h-16" />
             <FloatingCTA label="この関係について、僕に聞く" href="/consult?category=COMPATIBILITY" />
           </div>

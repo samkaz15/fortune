@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ScoreOrb } from "@/components/ScoreOrb";
-import {GlassMosaic, ScrollProgress, ShareRow, AffSlot } from "@/components/ui-common";
+import { GlassMosaic, ScrollProgress, ShareRow, AffSlot, DramaticLoading } from "@/components/ui-common";
 
 interface Report {
   reportDate: string;
@@ -39,6 +39,8 @@ export default function ReportPage() {
     }
     // 位置情報は任意(拒否されてもレポートは生成される)
     setLoading(true);
+    const startedAt = Date.now(); // 最低表示時間の計測開始(監査Phase1 Critical対応)
+    const MIN_LOADING_MS = 2000;
     const fetchReport = (coords?: { lat: number; lon: number }) => {
       const qs = coords
         ? `?period=${period}&lat=${coords.lat}&lon=${coords.lon}`
@@ -66,7 +68,12 @@ export default function ReportPage() {
           else if (d) setError({ message: "レポートの生成に失敗しました。少し時間をおいて、もう一度開いてみてください。", href: "/report", label: "再読み込み" });
         })
         .catch(() => setError({ message: "通信に失敗しました。電波の良いところで再読み込みしてください。", href: "/report", label: "再読み込み" }))
-        .finally(() => setLoading(false));
+        .finally(() => {
+          // API応答が速くても最低2秒は演出を見せ、遅い場合は待たずにすぐ結果を表示する
+          const elapsed = Date.now() - startedAt;
+          const remaining = Math.max(0, MIN_LOADING_MS - elapsed);
+          setTimeout(() => setLoading(false), remaining);
+        });
     };
 
     if (typeof navigator !== "undefined" && navigator.geolocation) {
@@ -81,7 +88,7 @@ export default function ReportPage() {
   }, [period]);
 
   if (loading) {
-    return <DramaticLoading />;
+    return <DramaticLoading messages={["糸をたどっています、、", "今日の流れと重ねています（65%）", "見えました。"]} />;
   }
 
   if (error) {
@@ -205,23 +212,6 @@ export default function ReportPage() {
       >
         もっと詳しく相談する
       </Link>
-    </div>
-  );
-}
-
-/** CV2: 3秒ドラマチックローディング(糸をたどる→重ねる→スコアリング) */
-function DramaticLoading() {
-  const [step, setStep] = useState(0);
-  useEffect(() => {
-    const t1 = setTimeout(() => setStep(1), 1200);
-    const t2 = setTimeout(() => setStep(2), 2400);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, []);
-  const texts = ["糸をたどっています、、", "今日の流れと重ねています（65%）", "スコアリングで出しますね。"];
-  return (
-    <div className="flex flex-col items-center gap-5 pt-32">
-      <div className="h-16 w-16 animate-spin rounded-full border-2 border-ink-700 border-t-gold-500" />
-      <p className="animate-pulse text-sm text-paper-200">{texts[step]}</p>
     </div>
   );
 }
