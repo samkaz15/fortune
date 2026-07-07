@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ScoreOrb } from "@/components/ScoreOrb";
 import {GlassMosaic, ScrollProgress, ShareRow, AffSlot } from "@/components/ui-common";
@@ -27,8 +27,16 @@ export default function ReportPage() {
   const [error, setError] = useState<{ message: string; href: string; label: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<"today" | "week" | "month" | "nextMonth">("today");
+  // 期間ごとの取得結果をキャッシュ(タブ切替を即時反応に / 2026-07-07 速度改善)
+  const cacheRef = useRef<Record<string, Report>>({});
 
   useEffect(() => {
+    const cached = cacheRef.current[period];
+    if (cached) {
+      setReport(cached);
+      setLoading(false);
+      return; // 再フェッチ不要(日付が変わるまで結果は不変)
+    }
     // 位置情報は任意(拒否されてもレポートは生成される)
     setLoading(true);
     const fetchReport = (coords?: { lat: number; lon: number }) => {
@@ -54,7 +62,7 @@ export default function ReportPage() {
         })
         .then((d) => {
           // 想定形かを検証してから表示(不正データでの真っ白クラッシュを防ぐ)
-          if (d && d.keywords && typeof d.score === "number") setReport(d);
+          if (d && d.keywords && typeof d.score === "number") { cacheRef.current[period] = d; setReport(d); }
           else if (d) setError({ message: "レポートの生成に失敗しました。少し時間をおいて、もう一度開いてみてください。", href: "/report", label: "再読み込み" });
         })
         .catch(() => setError({ message: "通信に失敗しました。電波の良いところで再読み込みしてください。", href: "/report", label: "再読み込み" }))
