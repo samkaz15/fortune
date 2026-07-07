@@ -23,7 +23,7 @@ function weatherScore(pressureHpa: number): number {
 
 // 四柱の「今日の運気の波」(0-100) → 日運スコア(-10〜+10)
 function shichuScore(birthDate: Date): number {
-  const s = calculateShichu(birthDate); // waveは日柱五行×今日の相性
+  const s = calculateShichu(birthDate, new Date(), "day"); // 明示的に日運(日柱)で計算
   return Math.max(-10, Math.min(10, Math.round((s.wave - 55) / 4.5)));
 }
 

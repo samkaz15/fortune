@@ -35,7 +35,37 @@ export function stemBranchIndexFromDate(date: Date): number {
   return ((diffDays % 60) + 60) % 60;
 }
 
-export function calculateShichu(birthDate: Date, targetDate: Date = new Date()): ShichuSummary {
+/**
+ * 月柱インデックス(2026-07-07新設)。
+ * ⚠️ 正式な四柱推命は二十四節気の「節」(立春・啓蟄等)で月が切り替わるが、
+ * ここではグレゴリオ暦の月初を基準にした簡易近似(CEO占術監修時に節入り計算へ差し替え推奨)。
+ * 年初からの通し月数を60で循環させ、日柱とは独立した「月の巡り」を表現する。
+ */
+export function monthPillarIndexFromDate(date: Date): number {
+  const monthsFromEpoch = (date.getFullYear() - 2000) * 12 + date.getMonth();
+  return ((monthsFromEpoch % 60) + 60) % 60;
+}
+
+/**
+ * 年柱インデックス(2026-07-07新設)。
+ * ⚠️ 正式には立春(2/4頃)を境に年が切り替わるが、ここではグレゴリオ暦の1/1を基準にした簡易近似。
+ */
+export function yearPillarIndexFromDate(date: Date): number {
+  return (((date.getFullYear() - 1984) % 60) + 60) % 60; // 1984=甲子年を基準
+}
+
+export type PeriodUnit = "day" | "week" | "month" | "year";
+
+/**
+ * 期間種別ごとに専用の柱を使い分けて運気波を計算する(2026-07-07新設)。
+ * 四柱推命の本来の構造どおり: 日運=日柱、月運=月柱、年運=年柱で相性を見る。
+ * 週運は伝統的な四柱推命に存在しない単位のため、日柱をベースに扱う(一般的な占いサービスの実務慣行)。
+ */
+export function calculateShichu(
+  birthDate: Date,
+  targetDate: Date = new Date(),
+  periodUnit: PeriodUnit = "day"
+): ShichuSummary {
   const idx = stemBranchIndexFromDate(birthDate);
   const stem = JIKKAN[idx % 10];
   const branch = JUNISHI[idx % 12];
@@ -44,10 +74,18 @@ export function calculateShichu(birthDate: Date, targetDate: Date = new Date()):
   // 「今日の運気の波」(2026-07-07修正): 五行5種のみでは粒度が粗く、
   // 期間タブ(今日/今週/今月/来月)の代表日が同じ五行に当たると同一スコアになるバグがあった。
   // 60干支の周期距離(0-30)を主軸にし、五行の相性を補正として加える2段構成に変更。
-  const todayIdx = stemBranchIndexFromDate(targetDate);
+  // 期間種別に応じて「対象の柱」を切り替える(日運=日柱/週運=日柱/月運=月柱/年運=年柱)
+  const targetIdx =
+    periodUnit === "month"
+      ? monthPillarIndexFromDate(targetDate)
+      : periodUnit === "year"
+        ? yearPillarIndexFromDate(targetDate)
+        : stemBranchIndexFromDate(targetDate); // day/week は日柱
+
+  const todayIdx = targetIdx;
   const todayElement = GOGYO_OF_JIKKAN[JIKKAN[todayIdx % 10]];
 
-  // 60干支の円環距離(0=同日相当・大吉 〜 30=正反対)
+  // 60干支の円環距離(0=相性最良 〜 30=正反対)
   const cycleDiff = Math.abs(idx - todayIdx) % 60;
   const cycleDistance = Math.min(cycleDiff, 60 - cycleDiff); // 0-30
 

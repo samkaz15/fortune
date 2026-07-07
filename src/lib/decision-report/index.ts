@@ -73,7 +73,10 @@ export async function generateDailyReport(params: {
   const date = params.date ?? new Date();
 
   // ---- ①占術シグナル抽出(4占術すべて・役割固定) ----
-  const shichu = calculateShichu(profile.birthDate, date); // 運気の波・タイミング
+  // periodLabelから期間種別を判定し、日運=日柱/週運=日柱/月運=月柱/年運=年柱で計算する(2026-07-07)
+  const periodUnit: "day" | "week" | "month" | "year" =
+    params.periodLabel === "今月" ? "month" : params.periodLabel === "来月" ? "month" : params.periodLabel === "今年" ? "year" : params.periodLabel === "今週" ? "week" : "day";
+  const shichu = calculateShichu(profile.birthDate, date, periodUnit); // 運気の波・タイミング(期間種別対応)
   const sanmei = calculateSanmei(profile.birthDate); // ビジネス・才能
   const horoscope = calculateHoroscope(profile.birthDate); // 心理・感情
   const seimei = calculateSeimei(profile.familyName, profile.givenName); // 人間関係・社会運
