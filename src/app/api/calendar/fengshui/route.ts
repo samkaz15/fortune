@@ -18,7 +18,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "INVALID_REQUEST" }, { status: 400 });
   }
   // 非会員/未登録: 一般カレンダー(吉日・意味・行動は閲覧可)+登録誘導(UI仕様v5)
-  const profile = userId ? await prisma.userProfile.findUnique({ where: { userId } }) : null;
+  const profile = userId
+    ? await prisma.userProfile.findUnique({ where: { userId }, select: { birthDate: true } })
+    : null;
   if (!profile) {
     return NextResponse.json({
       ...buildGeneralMonth(year, month),

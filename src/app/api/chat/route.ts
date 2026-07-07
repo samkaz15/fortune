@@ -145,7 +145,11 @@ export async function POST(req: NextRequest) {
   }
 
   // ---- 2. プロフィール(PII)取得。未登録なら先に登録を促す ----
-  const profile = await prisma.userProfile.findUnique({ where: { userId } });
+  // avatar列が本番DBに未追加でも落ちないよう、必要カラムのみ明示select(2026-07-07再発防止)
+  const profile = await prisma.userProfile.findUnique({
+    where: { userId },
+    select: { name: true, birthDate: true, birthTime: true, gender: true },
+  });
   if (!profile) {
     return NextResponse.json(
       { error: "PROFILE_REQUIRED", message: "占いには名前・生年月日の登録が必要です。" },

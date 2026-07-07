@@ -23,7 +23,21 @@ export async function GET(req: NextRequest) {
     throw e;
   }
 
-  const profile = await prisma.userProfile.findUnique({ where: { userId } });
+  try {
+    return await handleReport(req, userId);
+  } catch (e) {
+    // 2026-07-07: 原因調査のため詳細をサーバーログへ残す(Vercel Logsで追跡可能)
+    console.error("[report/today] generation failed:", e instanceof Error ? e.stack ?? e.message : e);
+    return NextResponse.json({ error: "REPORT_GENERATION_FAILED" }, { status: 500 });
+  }
+}
+
+async function handleReport(req: NextRequest, userId: string) {
+  // avatar列が本番DBに未追加でも落ちないよう、必要カラムのみ明示select(2026-07-07再発防止)
+  const profile = await prisma.userProfile.findUnique({
+    where: { userId },
+    select: { name: true, birthDate: true },
+  });
   if (!profile) {
     return NextResponse.json({ error: "PROFILE_REQUIRED" }, { status: 409 });
   }

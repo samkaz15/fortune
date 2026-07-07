@@ -13,7 +13,10 @@ async function todayScore(): Promise<number> {
   try {
     const userId = await getCurrentUserId();
     if (userId) {
-      const p = await prisma.userProfile.findUnique({ where: { userId } });
+      const p = await prisma.userProfile.findUnique({
+        where: { userId },
+        select: { birthDate: true },
+      });
       if (p) return calculateShichu(p.birthDate).wave;
     }
   } catch {

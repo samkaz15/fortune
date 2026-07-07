@@ -43,7 +43,10 @@ export async function GET(_req: NextRequest) {
   let recommendation: { shrineId: string; reason: string } | null = null;
   const userId = await getCurrentUserId();
   if (userId) {
-    const profile = await prisma.userProfile.findUnique({ where: { userId } });
+    const profile = await prisma.userProfile.findUnique({
+      where: { userId },
+      select: { birthDate: true },
+    });
     if (profile && shrines.length > 0) {
       const { wave } = calculateShichu(profile.birthDate, new Date());
       const preferredTags = wave >= 80 ? ["仕事運", "金運"] : wave >= 50 ? ["総合運", "開運"] : ["厄除け", "癒し"];

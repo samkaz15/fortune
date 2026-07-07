@@ -29,7 +29,10 @@ export async function GET(req: NextRequest) {
   const year = Number(req.nextUrl.searchParams.get("year") ?? now.getFullYear());
   const month = Number(req.nextUrl.searchParams.get("month") ?? now.getMonth() + 1); // 1-12
 
-  const profile = await prisma.userProfile.findUnique({ where: { userId } });
+  const profile = await prisma.userProfile.findUnique({
+    where: { userId },
+    select: { birthDate: true },
+  });
   if (!profile) {
     return NextResponse.json({ error: "PROFILE_REQUIRED" }, { status: 409 });
   }

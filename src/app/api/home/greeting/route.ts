@@ -41,7 +41,10 @@ export async function GET(req: NextRequest) {
   let sScore = 0;
   const userId = await getCurrentUserId();
   if (userId) {
-    const profile = await prisma.userProfile.findUnique({ where: { userId } });
+    const profile = await prisma.userProfile.findUnique({
+      where: { userId },
+      select: { birthDate: true },
+    });
     if (profile) sScore = shichuScore(profile.birthDate);
   }
 
