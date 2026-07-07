@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { AffSlot } from "@/components/ui-common";
 import Link from "next/link";
+import { randomBytes } from "node:crypto";
 import { AvatarUploader } from "@/components/AvatarUploader";
+import { ReferralShare } from "@/components/ReferralShare";
 import { prisma } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/auth";
 import { getRemainingDailyFreeQuota } from "@/lib/redis";
@@ -22,6 +24,16 @@ export default async function MyPage() {
   } catch {
     /* avatar列未追加の本番でも落ちないようにする */
   }
+
+  // 紹介制度(2026-07-07復活・Marketing-011,012): 招待コード未発行なら発行する
+  let referralUser = await prisma.user.findUnique({ where: { id: userId }, select: { referralCode: true } });
+  if (referralUser && !referralUser.referralCode) {
+    const alphabet = "23456789abcdefghjkmnpqrstuvwxyz"; // 視認性の悪い0/O/1/lは除外
+    const code = Array.from(randomBytes(8), (b) => alphabet[b % alphabet.length]).join("");
+    referralUser = await prisma.user.update({ where: { id: userId }, data: { referralCode: code }, select: { referralCode: true } });
+  }
+  const invitedCount = await prisma.user.count({ where: { referredByUserId: userId } });
+
   const [profile, subscription, creditBalance, pointBalance, remainingFree, recentResults] = await Promise.all([
     prisma.userProfile.findUnique({ where: { userId }, select: { displayName: true, name: true, birthDate: true } }),
     prisma.subscription.findUnique({ where: { userId } }),
@@ -60,6 +72,10 @@ export default async function MyPage() {
       >
         プラン・クレジットを管理する
       </Link>
+
+      {referralUser?.referralCode && (
+        <ReferralShare referralCode={referralUser.referralCode} invitedCount={invitedCount} />
+      )}
 
       <section>
         <h2 className="mb-3 font-display text-sm text-paper-200">最近の診断</h2>

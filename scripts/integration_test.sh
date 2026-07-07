@@ -249,7 +249,7 @@ check "GET /api/referral コード発行" "200" "$code"
 REF_CODE=$(python3 -c "import json; print(json.load(open('/tmp/ref.json'))['referralCode'])")
 echo "  (referralCode: $REF_CODE)"
 code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/invite/$REF_CODE")
-check "招待着地ページはv5で廃止→404" "404" "$code"
+check "招待着地ページ(2026-07-07紹介制度復活)→200" "200" "$code"
 # 招待経由で新規登録
 curl -s -c /tmp/cookies3.txt -o /dev/null -X POST "$BASE/api/auth/signup" -H "Content-Type: application/json" \
   -d "{\"email\":\"invited@example.com\",\"password\":\"password123\",\"familyName\":\"招待\",\"givenName\":\"次郎\",\"birthDate\":\"2000-01-01\",\"displayName\":\"じろう\",\"referralCode\":\"$REF_CODE\"}"
