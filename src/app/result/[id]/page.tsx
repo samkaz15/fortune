@@ -65,7 +65,7 @@ export default async function ResultPage({ params }: { params: { id: string } })
             </p>
           </div>
           <a
-            href="/plans"
+            href={`/plans?from=/result/${params.id}`}
             className="absolute inset-x-4 bottom-4 rounded-full bg-gold-500 py-3 text-center text-sm font-bold text-ink-950"
           >
             続きを見る

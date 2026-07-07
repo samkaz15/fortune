@@ -149,7 +149,7 @@ export default function LovePageClient() {
                   <div className="p-5 text-sm leading-relaxed text-paper-300 blur-[7px] select-none">ふたりの間で最初にすれ違いが生まれたのは、実は最近ではありません。相手が「言わないでいること」には理由があって、それは——</div>
                   <div className="absolute inset-0 flex flex-col items-center justify-end bg-gradient-to-b from-transparent via-ink-950/75 to-ink-950/95 p-5 text-center">
                     <p className="mb-3 text-[11px] font-bold text-rose-300">この関係で一番重要な「すれ違いの原因」は、まだここには表示されていません。</p>
-                    <PrimaryButton href="/plans" size="sm">{reading.deep.cta}</PrimaryButton>
+                    <PrimaryButton href="/plans?from=/love" size="sm">{reading.deep.cta}</PrimaryButton>
                     <p className="mt-2 text-[9px] text-paper-500">{reading.deep.note}</p>
                   </div>
                 </>

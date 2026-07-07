@@ -153,7 +153,7 @@ export default function WorkPageClient() {
                 <div className="absolute inset-0 flex flex-col items-center justify-end bg-gradient-to-b from-transparent via-ink-950/75 to-ink-950/95 p-5 text-center">
                   <p className="mb-1 text-[11px] font-bold text-paper-100">将来的に何と相性がいいのか——<br /><span className="text-gold-400">業界と、その中の部署</span>まで特定できています。</p>
                   <p className="mb-3 text-[10px] text-paper-500">この流れは一定期間続きます。ただし、次の転換点はまだ表示されていません。</p>
-                  <PrimaryButton href="/plans" size="sm">{reading.future.cta}</PrimaryButton>
+                  <PrimaryButton href="/plans?from=/work" size="sm">{reading.future.cta}</PrimaryButton>
                 </div>
               </div>
             ) : (

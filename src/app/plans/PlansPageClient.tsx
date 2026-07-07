@@ -2,21 +2,41 @@
 import { AffSlot } from "@/components/ui-common";
 import { track } from "@/lib/track-client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 /**
  * 画面遷移設計書「料金・決済画面」の実装。
  * サブスクと追加クレジットを2画面に分けず、同一画面内タブ切替にする設計判断済み(WBS回答参照)。
+ *
+ * 課金導線改善(2026-07-07・Marketing-006): fromクエリ(元の診断ページ)があれば
+ * Checkout API(/api/billing/subscribe)に渡し、決済完了後にその場で
+ * ロックが解ける体験にする。useSearchParams()はSuspense境界が必要なため
+ * 内部コンポーネントに分離している(既存のplans/completeページと同じパターン)。
  */
 export default function PlansPageClient() {
+  return (
+    <Suspense fallback={null}>
+      <PlansPageInner />
+    </Suspense>
+  );
+}
+
+function PlansPageInner() {
+  const searchParams = useSearchParams();
+  const from = searchParams.get("from");
   const [tab, setTab] = useState<"subscribe" | "credit">("subscribe");
   const [loading, setLoading] = useState(false);
 
   async function startCheckout(kind: "subscribe" | "credit") {
     setLoading(true);
-    track("checkout_started", { kind }); // 計測基盤(2026-07-07・Marketing-083)
+    track("checkout_started", { kind, from }); // 計測基盤(2026-07-07・Marketing-083)
     try {
-      const res = await fetch(`/api/billing/${kind}`, { method: "POST" });
+      const res = await fetch(`/api/billing/${kind}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from }),
+      });
       const data = await res.json();
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;

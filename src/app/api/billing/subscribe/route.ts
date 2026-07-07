@@ -4,8 +4,12 @@ import { requireUserId, AuthRequiredError } from "@/lib/auth";
 import { getStripe } from "@/lib/stripe";
 
 /**
- * POST /api/billing/subscribe
+ * POST /api/billing/subscribe { from?: string }
  * 月額サブスク登録(初月500円→2ヶ月目以降980円)のCheckoutセッションを発行する。
+ *
+ * 課金導線改善(2026-07-07・Marketing-006): `from`(元の診断ページ等)を受け取り、
+ * 決済完了後にそのページへ戻れるようにする。決済のためにログイン先の文脈を
+ * 失わせない設計(IA分析で最重要CVR改善案として指摘されていたもの)。
  *
  * Stripe側の設定が必要な事項(実装だけでは完結しない、運用開始前にStripeダッシュボードで設定):
  * - 通常価格(980円/月)のPriceを作成し、STRIPE_SUBSCRIPTION_PRICE_ID に設定する
@@ -21,6 +25,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "AUTH_REQUIRED" }, { status: 401 });
     }
     throw e;
+  }
+
+  // 戻り先ページ(自分のこと/love/work等)。外部URLへのオープンリダイレクトを防ぐため
+  // 相対パス("/"始まり)のみ許可する
+  let from = "";
+  try {
+    const body = await req.json();
+    if (typeof body?.from === "string" && body.from.startsWith("/")) from = body.from;
+  } catch {
+    /* bodyなしのリクエストも許容(後方互換) */
   }
 
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
@@ -42,13 +56,17 @@ export async function POST(req: NextRequest) {
     stripeCustomerId = customer.id;
   }
 
+  const successUrl = from
+    ? `${process.env.APP_URL}/plans/complete?type=subscribe&from=${encodeURIComponent(from)}`
+    : `${process.env.APP_URL}/plans/complete?type=subscribe`;
+
   const checkoutSession = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: stripeCustomerId,
     line_items: [{ price: priceId, quantity: 1 }],
     discounts: firstMonthCouponId ? [{ coupon: firstMonthCouponId }] : undefined,
-    success_url: `${process.env.APP_URL}/plans/complete?type=subscribe`,
-    cancel_url: `${process.env.APP_URL}/plans`,
+    success_url: successUrl,
+    cancel_url: from ? `${process.env.APP_URL}${from}` : `${process.env.APP_URL}/plans`,
     metadata: { userId },
   });
 
