@@ -7,3 +7,6 @@ ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS avatar TEXT;
 -- 修正前に生成されたdaily_reportsは古いロジックのスコアのままなので削除し、
 -- 次回アクセス時に新ロジックで自動再生成させる(ユーザー影響: 次回開いた時に再計算されるだけ)。
 DELETE FROM daily_reports;
+
+-- スコアリングロジック全面改訂(2026-07-07 統計的相対評価モデル)に伴う既存キャッシュのリセット
+DELETE FROM daily_reports;

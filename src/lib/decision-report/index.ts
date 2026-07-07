@@ -91,7 +91,8 @@ export async function generateDailyReport(params: {
 
   // ---- ④ルールベーススコアリング ----
   const breakdown = calculateDailyScore({
-    shichuWave: shichu.wave,
+    birthDate: profile.birthDate,
+    targetDate: date,
     envModifier: env.scoreModifier,
     userTheme: userTheme.theme,
     fortuneKeyword,
@@ -189,7 +190,8 @@ function buildFallbackReport(input: LlmInput): ReportContent {
   const theme = input.userTheme ?? input.fortuneKeyword;
   // 評価トーン4帯(CEOフィードバック 2026-07-06):
   // high=いい評価 / challenge=勝負の日(一歩踏み込む) / mid=普通 / low=悪い評価(でも前向きに着地)
-  const band = input.score >= 85 ? "high" : input.score >= 70 ? "challenge" : input.score >= 50 ? "mid" : "low";
+  // 2026-07-07: スコア分布を統計的相対評価(平均50・標準偏差16)に刷新したためしきい値を再設計
+  const band = input.score >= 80 ? "high" : input.score >= 65 ? "challenge" : input.score >= 40 ? "mid" : "low";
   // 日干の解釈辞書(Core Mapping Spec)を織り込み、生年月日ごとに文面を変える
   const stem = interpretDayStem(input.dayStem ?? "戊");
   const L = input.periodLabel ?? "今日";
