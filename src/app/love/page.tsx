@@ -7,6 +7,7 @@
  */
 import { useState } from "react";
 import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA, DramaticLoading, withMinimumDuration, AffSlot, PrimaryButton } from "@/components/ui-common";
+import { track } from "@/lib/track-client";
 
 interface Reading {
   score: number;
@@ -39,6 +40,7 @@ export default function LovePage() {
     if (!name || !partnerName || submitting) return;
     setSubmitting(true);
     setPhase("loading");
+    track("free_reading_started", { category: "love" });
     try {
       const data = await withMinimumDuration(
         fetch("/api/love/reading", {
@@ -49,6 +51,7 @@ export default function LovePage() {
       );
       setReading(data);
       setPhase("result");
+      track("free_reading_completed", { category: "love" });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setSubmitting(false);

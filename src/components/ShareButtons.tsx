@@ -1,5 +1,7 @@
 "use client";
 
+import { track } from "@/lib/track-client";
+
 /**
  * IA設計書の「診断結果を未ログインでも閲覧可にしバイラル資産にする」方針を実装するUI。
  * Web Share APIが使える環境ではネイティブシェア、使えない場合はURLコピーにフォールバックする。
@@ -8,6 +10,7 @@ export function ShareButtons({ resultId }: { resultId: string }) {
   async function handleShare() {
     const url = `${window.location.origin}/result/${resultId}`;
     const text = "今日の運勢を占ってもらった。#糸町の少年";
+    track("share", { platform: "native_or_copy", resultId }); // 計測基盤(2026-07-07・Marketing-083)
 
     if (navigator.share) {
       await navigator.share({ url, text });

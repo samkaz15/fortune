@@ -7,6 +7,7 @@
  */
 import { useState } from "react";
 import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA, AffSlot, DramaticLoading, withMinimumDuration, PrimaryButton } from "@/components/ui-common";
+import { track } from "@/lib/track-client";
 
 interface Reading {
   name: string;
@@ -38,6 +39,7 @@ export default function SelfPage() {
     if (!name || !birthDate || submitting) return;
     setSubmitting(true);
     setPhase("loading");
+    track("free_reading_started", { category: "self" });
     try {
       const data = await withMinimumDuration(
         fetch("/api/self/reading", {
@@ -48,6 +50,7 @@ export default function SelfPage() {
       );
       setR(data);
       setPhase("result");
+      track("free_reading_completed", { category: "self" });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setSubmitting(false);

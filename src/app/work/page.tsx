@@ -7,6 +7,7 @@
  */
 import { useState } from "react";
 import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA, DramaticLoading, withMinimumDuration, PrimaryButton } from "@/components/ui-common";
+import { track } from "@/lib/track-client";
 
 type Situation = "うまくいっている" | "少し疲れている" | "判断に迷っている" | "環境を変えたい";
 
@@ -41,6 +42,7 @@ export default function WorkPage() {
     if (!name || !birthDate || submitting) return;
     setSubmitting(true);
     setPhase("loading");
+    track("free_reading_started", { category: "work" });
     try {
       const data = await withMinimumDuration(
         fetch("/api/work/reading", {
@@ -51,6 +53,7 @@ export default function WorkPage() {
       );
       setReading(data);
       setPhase("result");
+      track("free_reading_completed", { category: "work" });
       window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setSubmitting(false);

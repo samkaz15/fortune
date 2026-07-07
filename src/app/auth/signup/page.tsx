@@ -1,7 +1,8 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { track } from "@/lib/track-client";
 
 export default function SignupPage() {
   return (
@@ -27,6 +28,11 @@ function SignupForm() {
   });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    track("signup_started", { hasReferral: Boolean(referralCode) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function update<K extends keyof typeof form>(key: K, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));

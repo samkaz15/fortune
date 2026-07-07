@@ -9,6 +9,7 @@
  */
 import { useEffect, useState, memo } from "react";
 import Link from "next/link";
+import { track } from "@/lib/track-client";
 
 export function GlassMosaic({
   children,
@@ -23,6 +24,13 @@ export function GlassMosaic({
   ctaHref: string;
   note?: string;
 }) {
+  // 有料誘導表示の計測(2026-07-07・Marketing-083): 全ページのモザイクCTA表示を自動計測。
+  // マウント時1回のみ送信(スクロールの度に送らないようdepsは空配列)
+  useEffect(() => {
+    track("upsell_shown", { ctaHref });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="relative overflow-hidden rounded-card border border-ink-700" style={{ minHeight: 190 }}>
       <div className="select-none p-5 blur-[8px]" aria-hidden>
@@ -81,6 +89,7 @@ export function ShareRow({ text, title }: { text: string; title?: string }) {
   const url = typeof window !== "undefined" ? window.location.href : "";
   const enc = encodeURIComponent;
   async function nativeShare() {
+    track("share", { platform: "instagram_or_tiktok" }); // 計測基盤(2026-07-07・Marketing-083)
     try {
       if (navigator.share) await navigator.share({ title: title ?? "糸町の少年", text, url });
       else {
@@ -96,8 +105,8 @@ export function ShareRow({ text, title }: { text: string; title?: string }) {
     <div className="mt-4">
       <p className="mb-2 text-center text-[10px] font-bold tracking-widest text-paper-500">SHARE ｜ 結果をシェア</p>
       <div className="flex justify-center gap-2">
-        <a href={`https://twitter.com/intent/tweet?text=${enc(text)}&url=${enc(url)}`} target="_blank" rel="noreferrer" className="rounded-full border border-ink-700 px-4 py-2 text-[11px] font-bold text-paper-200">X</a>
-        <a href={`https://social-plugins.line.me/lineit/share?url=${enc(url)}&text=${enc(text)}`} target="_blank" rel="noreferrer" className="rounded-full border border-ink-700 px-4 py-2 text-[11px] font-bold text-paper-200">LINE</a>
+        <a href={`https://twitter.com/intent/tweet?text=${enc(text)}&url=${enc(url)}`} target="_blank" rel="noreferrer" onClick={() => track("share", { platform: "x" })} className="rounded-full border border-ink-700 px-4 py-2 text-[11px] font-bold text-paper-200">X</a>
+        <a href={`https://social-plugins.line.me/lineit/share?url=${enc(url)}&text=${enc(text)}`} target="_blank" rel="noreferrer" onClick={() => track("share", { platform: "line" })} className="rounded-full border border-ink-700 px-4 py-2 text-[11px] font-bold text-paper-200">LINE</a>
         {/* Instagram/TikTokは共有URLスキームが無いためネイティブ共有(アプリ選択)で対応 */}
         <button onClick={nativeShare} className="rounded-full border border-ink-700 px-4 py-2 text-[11px] font-bold text-paper-200">Instagram / TikTok</button>
       </div>

@@ -1,5 +1,6 @@
 "use client";
 import { AffSlot } from "@/components/ui-common";
+import { track } from "@/lib/track-client";
 
 import { useState } from "react";
 
@@ -13,6 +14,7 @@ export default function PlansPage() {
 
   async function startCheckout(kind: "subscribe" | "credit") {
     setLoading(true);
+    track("checkout_started", { kind }); // 計測基盤(2026-07-07・Marketing-083)
     try {
       const res = await fetch(`/api/billing/${kind}`, { method: "POST" });
       const data = await res.json();

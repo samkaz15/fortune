@@ -9,6 +9,9 @@ import { useState } from "react";
 
 interface Analytics {
   kpi: { totalUsers: number; activeSubscriptions: number; creditBuyers14d: number; subscriptionRate: number };
+  retention: { d1: number | null; d7: number | null; d30: number | null; cohortSizes: { d1: number; d7: number; d30: number } };
+  funnel: { freeReadingCompleted: number; checkoutStarted: number; subscriptionStarted: number; cvrReadingToCheckout: number; cvrCheckoutToSubscription: number };
+  ltv: { approxPerUserJpy: number; note: string };
   categoryPopularity: { category: string; sessions: number }[];
   dailySummary: { day: string; name: string; events: number; uniqueUsers: number; totalTokens: number }[];
 }
@@ -60,6 +63,44 @@ export default function AdminAnalyticsPage() {
                 <p className="mt-1 text-[11px] text-paper-400">{label}</p>
               </div>
             ))}
+          </section>
+
+          <section>
+            <h2 className="mb-3 text-sm font-bold text-paper-300">継続率(リテンション)</h2>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                ["D1継続率", data.retention.d1, data.retention.cohortSizes.d1],
+                ["D7継続率", data.retention.d7, data.retention.cohortSizes.d7],
+                ["D30継続率", data.retention.d30, data.retention.cohortSizes.d30],
+              ].map(([label, value, cohort]) => (
+                <div key={String(label)} className="rounded-card border border-ink-700 bg-ink-900/60 p-4 text-center">
+                  <p className="text-2xl font-bold text-torii-500">{value === null ? "—" : `${value}%`}</p>
+                  <p className="mt-1 text-[11px] text-paper-400">{label}</p>
+                  <p className="mt-0.5 text-[9px] text-paper-600">母数{cohort}人</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <h2 className="mb-3 text-sm font-bold text-paper-300">課金ファネル・LTV</h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="rounded-card border border-ink-700 bg-ink-900/60 p-4 text-center">
+                <p className="text-lg font-bold text-gold-400">{data.funnel.freeReadingCompleted} → {data.funnel.checkoutStarted}</p>
+                <p className="mt-1 text-[11px] text-paper-400">無料占い完了→課金開始</p>
+                <p className="mt-0.5 text-[9px] text-paper-600">CVR {data.funnel.cvrReadingToCheckout}%</p>
+              </div>
+              <div className="rounded-card border border-ink-700 bg-ink-900/60 p-4 text-center">
+                <p className="text-lg font-bold text-gold-400">{data.funnel.checkoutStarted} → {data.funnel.subscriptionStarted}</p>
+                <p className="mt-1 text-[11px] text-paper-400">課金開始→サブスク登録</p>
+                <p className="mt-0.5 text-[9px] text-paper-600">CVR {data.funnel.cvrCheckoutToSubscription}%</p>
+              </div>
+              <div className="rounded-card border border-ink-700 bg-ink-900/60 p-4 text-center">
+                <p className="text-lg font-bold text-gold-400">¥{data.ltv.approxPerUserJpy.toLocaleString()}</p>
+                <p className="mt-1 text-[11px] text-paper-400">LTV(簡易・ユーザー単価)</p>
+              </div>
+            </div>
+            <p className="mt-2 text-[10px] text-paper-600">{data.ltv.note}</p>
           </section>
 
           <section>

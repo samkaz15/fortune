@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
+import { trackEvent } from "@/lib/analytics";
 
 /**
  * POST /api/auth/signup
@@ -95,6 +96,12 @@ export async function POST(req: NextRequest) {
 
     return created;
   });
+
+  // 計測基盤(2026-07-07・Marketing-083): 会員登録完了+紹介経由なら合わせて記録
+  trackEvent("signup", { hasReferral: Boolean(inviter) }, user.id);
+  if (inviter) {
+    trackEvent("referral_signup", { inviterId: inviter.id }, user.id);
+  }
 
   const res = NextResponse.json({ userId: user.id });
   res.cookies.set("dev_user_id", user.id, {

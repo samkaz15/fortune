@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireUserId, AuthRequiredError } from "@/lib/auth";
+import { trackEvent } from "@/lib/analytics";
 
 /**
  * POST /api/account/cancel
@@ -22,6 +23,8 @@ export async function POST() {
     prisma.user.update({ where: { id: userId }, data: { deletedAt: new Date() } }),
     prisma.subscription.updateMany({ where: { userId }, data: { status: "canceled", canceledAt: new Date() } }),
   ]);
+
+  trackEvent("subscription_canceled", {}, userId); // 計測基盤(2026-07-07・Marketing-083)
 
   const res = NextResponse.json({ ok: true });
   res.cookies.delete("dev_user_id");

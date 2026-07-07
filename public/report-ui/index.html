@@ -964,6 +964,14 @@ body{padding-bottom:70px}
 </div>
 
 <script>
+/* ---- 計測基盤(2026-07-07・Marketing-083): LP表示イベント ---- */
+fetch('/api/analytics/track', {
+  method: 'POST',
+  headers: {'Content-Type':'application/json'},
+  body: JSON.stringify({name:'lp_view', props:{referrer: document.referrer || null}}),
+  keepalive: true
+}).catch(()=>{});
+
 /* ---- タブ切替 ---- */
 document.getElementById('tabs').addEventListener('click', (e)=>{
   const t = e.target.closest('.tab'); if(!t) return;
