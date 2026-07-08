@@ -63,7 +63,6 @@ fortune_verify/
 │
 ├─ public/
 │  ├─ character/                   # キャラクター画像(ホーム/レポートヒーロー等)
-│  └─ report-ui/index.html         # v4 LP静的配信(itomachi_report_ui_v4と同期運用)
 │
 ├─ prompts/
 │  ├─ chat/system_prompt.v2.4.md   # キャラクター人格プロンプト(Layer1)
@@ -91,7 +90,6 @@ fortune_verify/
 | `MilkyWayBackground.tsx` | 天の川背景+控えめな流れ星演出(端のみ・7-16秒間隔) | ホーム・自分のこと・恋愛・仕事 |
 | `HomeGreeting.tsx` | 3軸(天気×四柱)スコアリングによる挨拶文表示 | ホーム |
 | `ScoreOrb.tsx` | 円環スコアメーター(★+点数のドーナツ表示) | ホーム・今日の運勢 |
-| `ChatWindow.tsx` | 占いチャットUI(送受信・402/409/401分岐対応) | /consult(有料会員直行時) |
 | `AvatarUploader.tsx` | 画像選択→256px正方形縮小→アップロード | マイページ |
 | `PopularRanking.tsx` | 人気占いランキング表示 | ホーム |
 | `ShareButtons.tsx` | SNS共有(X/Instagram/TikTok/LINE) | 結果共有ページ |
@@ -145,15 +143,14 @@ fortune_verify/
 - **AI**: 3段フォールバック(Sakana AI → OpenAI gpt-4o-mini → 辞書ベースのフォールバック生成)
 - **決済**: Stripe(サブスク・クレジット・トークション決済、Webhook即時反映)
 - **認証**: 自前実装(Cookieセッション・24時間有効・bcryptハッシュ)
-- **静的配信**: `public/report-ui/index.html`(LP、v4モックと同期運用)
 - **監視/バッチ**: Vercel Cron(トークション自動終了5分毎・通知評価バッチ日次)、`/api/health`
 
 ---
 
 ## ⑬ 気付いたこと(現状分析のみ・改善提案は含まない)
 
-1. **`/consult` は物理的にはページだが実質リダイレクタ**: サーバーコンポーネントでログイン状態→有料会員なら`/report`へ、それ以外はLP静的HTMLへ`redirect()`する薄い分岐ロジックのみ。UIを持たない特殊なルート。
-2. **2つのLP実体が並存**: `public/report-ui/index.html`(本番配信)と `/mnt/user-data/outputs/itomachi_report_ui_v4.html`(編集元)を手動`cp`で同期する運用。Next.jsのビルドパイプラインには入っていない静的ファイル。
+1. (廃止済み 2026-07-08) 旧`/consult`はLP/レポートへのリダイレクタだったが、LPとともに削除。
+2. (解消済み 2026-07-08) 旧v4 LPは手動同期運用の静的HTMLだったが、LP廃止により削除。
 3. **`src/lib/fortune-engine/` と `src/lib/decision-report/` の2層構造**: 前者が占術そのものの計算(四柱推命・算命学・姓名判断・暦注・ホロスコープ・危機検知)、後者がそれらを合成してレポート文章・スコアにする層。責務は分離されているが、呼び出し関係はやや複雑(decision-report/index.tsが5つの占術関数を横断的に呼ぶ)。
 4. **スコアリングロジックは2026-07-07に全面改訂済み**(`scoring.ts`)。四柱推命の月柱・年柱を新設し、7要素の加重合成+統計的リスケールで正規分布に近い分布(平均50・標準偏差16)を実現。旧ロジックとの後方互換フィールド(`base`/`envModifier`/`themeBonus`)がinterfaceに残存している。
 5. **DailyReportはユニーク制約`(userId, reportDate)`でキャッシュされる**: 占術ロジックを変更しても、過去に生成済みのレポートは再計算されない。ロジック変更のたびに手動`DELETE FROM daily_reports`が運用上必要になっている(実際に本セッション内で複数回発生)。
@@ -171,7 +168,6 @@ fortune_verify/
 | 画面名 | Route | 対応ファイル | 説明 |
 |---|---|---|---|
 | ホーム | `/` | `src/app/page.tsx` | 3軸挨拶+スコアオーブ+「相談する」入口+人気ランキング。全体のハブ |
-| 占い相談(入口) | `/consult` | `src/app/consult/page.tsx` | UIなし。有料会員→`/report`へredirect、それ以外→LP(`/report-ui/index.html`)へredirect |
 | 今日の運勢 | `/report` | `src/app/report/page.tsx` | 期間タブ(今日/今週/今月/来月)。スコア・行動方針・注意点・モザイク+CTA |
 | 自分のこと | `/self` | `src/app/self/page.tsx` | 名前+生年月日→本質診断。結果サンプル→入力→ローディング→結果 |
 | 恋愛・相性 | `/love` | `src/app/love/page.tsx` | 2名の名前→姓名判断ベースの相性。3層構造(表層/中層/深層ロック) |
@@ -197,7 +193,7 @@ fortune_verify/
 | 特定商取引法表記 | `/legal/tokushoho` | `src/app/legal/tokushoho/page.tsx` | 事業者情報・返金ポリシー |
 | 運営ダッシュボード | `/admin/analytics` | `src/app/admin/analytics/page.tsx` | ADMIN_SECRET保護。KPI・実験結果閲覧 |
 
-**LP(準ページ扱い)**: `/report-ui/index.html`(`public/`直下の静的HTML)。Next.jsのルーティング外だが、`/consult`のリダイレクト先として実質的な「26番目の画面」。編集は`itomachi_report_ui_v4.html`との手動同期で行う運用。
+**LP**: 廃止(2026-07-08)。旧`/report-ui/index.html`と入口`/consult`は削除済み。集客導線は各無料診断ページ(`/self` `/love` `/work` `/report`)が直接担う。
 
 ---
 
@@ -211,11 +207,9 @@ flowchart TD
     end
 
     HOME["/ ホーム"] -->|"今日の自分の運勢レポートを見る"| REPORT["/report"]
-    HOME -->|"糸町の少年に相談する"| CONSULT["/consult(判定のみ)"]
+    HOME -->|"糸町の少年と直接話す"| AUCTION
     HOME -->|"自分のこと/恋愛・相性/仕事"| SELF["/self"] & LOVE["/love"] & WORK["/work"]
 
-    CONSULT -->|未ログイン・無料会員| LP["/report-ui/index.html (v4 LP)"]
-    CONSULT -->|有料会員| REPORT
 
     LP -->|"みてもらう"| SELF & LOVE & WORK
     LP -->|ドロワー| HOME & REPORT & CALENDAR["/calendar"] & AUCTION["/auction"] & SHRINES["/shrines"]
@@ -225,7 +219,7 @@ flowchart TD
     LOVE -->|"関係の本質を確認する"| PLANS
     WORK -->|"仕事の転換点を確認する"| PLANS
 
-    REPORT -->|"この先を、僕から聞く"| CONSULT
+    REPORT -->|"この先を、僕から聞く"| SIGNUP["/auth/signup"]
 
     AUCTION -->|入札後・落札| PAY["決済(Stripe Checkout)"] --> RESERVE["/auction/reserve"]
     PLANS -->|決済| STRIPE_CO["Stripe Checkout"] --> COMPLETE["/plans/complete"] --> MYPAGE["/mypage"]
@@ -249,7 +243,6 @@ flowchart TD
 - love/workの深層はロックのまま
 
 ### 有料会員(サブスクactive)
-- `/consult`が**LPを経由せず直接`/report`へ**(LP再訪防止のUX最適化)
 - チャット5回/日。超過後はポイント→クレジット消費。クレジットも尽きたら「追加5回¥300」
 - `/report`4期間すべて全文、love深層・work部署特定も解放
 
@@ -448,7 +441,7 @@ flowchart TB
     subgraph Vercel["Vercel(Frontend + BFF、単一デプロイ)"]
         NEXT["Next.js 14 App Router\nReact Server Components + Client Components"]
         API_ROUTES["Route Handlers(34本)\nsrc/app/api/**"]
-        STATIC["静的配信\npublic/report-ui/index.html(LP)\npublic/character/*.jpg"]
+        STATIC["静的配信\npublic/character/*.jpg"]
         CRON["Vercel Cron\nauction/close(5分毎)\nnotifications/evaluate(日次)"]
     end
 
@@ -659,3 +652,8 @@ flowchart LR
 ### コードベース軽量化(2026-07-08確定分)
 - 削除: `/api/chat`・`/news`・`/api/weather`・`/api/referral`・fortune-engineのチャット専用コード・入札の同額先着分岐・`src/lib/db-replica.ts`(CL30)・`src/lib/experiments.ts`(CL31)。CL30/31は参照ゼロのスケール先行実装で、必要時はgit履歴から復元する方針。`ExperimentAssignment`モデルはDB変更なし方針によりスキーマに温存(テーブルは無害)。
 - ESLint導入: `eslint`+`eslint-config-next`(next/core-web-vitals)。警告0で運用開始。
+
+### LP(report-ui)と占い相談導線の廃止(2026-07-08 追加指示)
+- `public/report-ui/index.html`(旧v4 LP・手動同期運用)と入口`/consult`を削除。LP内ハンバーガーの「相談チャット(デモ)」もLPごと消滅。
+- 接続の張り替え: BottomNav/Headerの「占い相談」項目は削除。ホームの「糸町の少年に相談する」→トークション(`/auction`)。人気ランキングと結果画面の推薦リンクは`categoryPage()`(recommendation.tsに一元化: SELF→/self, COMPATIBILITY→/love, BUSINESS→/work)で対応する無料診断ページへ。恋愛/仕事結果のFloatingCTAは要件⑥と同方針で`/auth/signup?from=`へ。
+- middlewareのreport-ui除外設定も撤去。

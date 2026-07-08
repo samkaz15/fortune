@@ -5,6 +5,7 @@ import { getCurrentUserId } from "@/lib/auth";
 import { ScoreOrb } from "@/components/ScoreOrb";
 import { ShareButtons } from "@/components/ShareButtons";
 import { recommendNextCategory } from "@/lib/recommendation";
+import { categoryPage } from "@/lib/category-links";
 
 /**
  * 画面遷移設計書「診断結果(ロック中/解放済み)」の実装。
@@ -74,7 +75,7 @@ export default async function ResultPage({ params }: { params: { id: string } })
       )}
 
       <Link
-        href={`/consult?category=${recommendation.category}`}
+        href={categoryPage(recommendation.category)}
         className="rounded-card border border-ink-700 bg-ink-900/40 p-4"
       >
         <p className="mb-1 text-xs text-paper-600">あわせて見られている診断</p>

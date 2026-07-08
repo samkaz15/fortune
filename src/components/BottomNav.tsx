@@ -5,12 +5,11 @@ import { usePathname } from "next/navigation";
 
 /**
  * 下部ナビ(マスターデザイン=LP index.htmlの.bnavに完全統一 / CEO指示 2026-07-07)。
- * アイコン・余白・サイズ・色・角丸・選択状態までLPと同一仕様。
+ * アイコン・余白・サイズ・色・角丸・選択状態は旧LP由来の統一仕様。
  * 全画面共通コンポーネント(layout.tsxで一括使用。今後の新画面も自動で同一ナビ)。
  */
 const TABS = [
   { href: "/", label: "ホーム", icon: "⌂" },
-  { href: "/consult", label: "占い相談", icon: "💬" },
   { href: "/auction", label: "トークション", icon: "📞" },
   { href: "/mypage", label: "マイページ", icon: "👤" },
 ];

@@ -43,5 +43,5 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   // 静的アセット・画像最適化・faviconは対象外(不要なCookie再発行を避ける)
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|report-ui|character).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|character).*)"],
 };

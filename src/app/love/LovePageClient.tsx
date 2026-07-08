@@ -161,7 +161,7 @@ export default function LovePageClient() {
             <ShareRow text={`ふたりの相性は${reading.score}点でした — 糸町の少年`} />
             <AffSlot label="AFFILIATE SLOT AREA C" />
             <div className="h-16" />
-            <FloatingCTA label="この関係について、僕に聞く" href="/consult?category=COMPATIBILITY" />
+            <FloatingCTA label="会員登録して、続きを占う" href="/auth/signup?from=/love" />
           </div>
         )}
       </div>

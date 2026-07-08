@@ -71,7 +71,7 @@ export default async function TopPage() {
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-base text-paper-200">相談する</h2>
         {/* LP方針(2026-07-06): 相談の入口はv4 LPへ。有料会員は/consult内で自動的に/reportへ振り分け */}
-        <ConsultShortcut href="/consult" label="糸町の少年に相談する" />
+        <ConsultShortcut href="/auction" label="糸町の少年と直接話す(トークション)" />
         <div className="grid grid-cols-3 gap-3">
           <ConsultShortcut href="/self" label="自分のこと" />
           <ConsultShortcut href="/love" label="恋愛・相性" />

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { categoryPage } from "@/lib/category-links";
 
 interface RankingItem {
   rank: number;
@@ -34,7 +35,7 @@ export function PopularRanking() {
         {items.slice(0, 3).map((item) => (
           <Link
             key={item.category}
-            href={`/consult?category=${item.category}`}
+            href={categoryPage(item.category)}
             className="flex items-center gap-3 rounded-card border border-ink-700 bg-ink-900/40 px-4 py-3"
           >
             <span className="font-display text-lg text-gold-400">{item.rank}</span>

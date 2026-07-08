@@ -176,7 +176,7 @@ export default function WorkPageClient() {
               キャリア参考情報（外部リンク）
             </div>
             <div className="h-16" />
-            <FloatingCTA label="この結果について、僕に聞く" href="/consult?category=BUSINESS" />
+            <FloatingCTA label="会員登録して、続きを占う" href="/auth/signup?from=/work" />
           </div>
         )}
       </div>

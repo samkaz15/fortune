@@ -14,7 +14,6 @@ import { ChevronLeft, User, Menu, X } from "lucide-react";
 const MENU: { href: string; label: string; note?: string }[] = [
   { href: "/", label: "ホーム", note: "今日は何をみる？" },
   { href: "/report", label: "今日の運勢", note: "今日・今週・今月・来月" },
-  { href: "/consult", label: "占い相談", note: "糸町の少年と話す" },
   { href: "/self", label: "自分のこと", note: "本来の性格・強み・今日の行動" },
   { href: "/love", label: "恋愛・相性占い", note: "ふたりの関係を整理する" },
   { href: "/work", label: "仕事・キャリア占い", note: "働き方の本質と中長期の流れ" },
