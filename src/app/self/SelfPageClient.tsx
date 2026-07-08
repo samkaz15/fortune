@@ -5,7 +5,8 @@
  * 構成: 占える内容6項目 → 診断結果サンプル(無料版UI) → 名前 → 生年月日 → 診断開始
  * 結果: ①状態②傾向③注意1つ④行動1つ(Core Mapping Spec固定フォーマット)。深掘りはサブスク。
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { saveFortuneInput, loadFortuneInput } from "@/lib/fortune-input";
 import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA, AffSlot, DramaticLoading, withMinimumDuration, PrimaryButton } from "@/components/ui-common";
 import { track } from "@/lib/track-client";
 
@@ -31,12 +32,21 @@ const MENU = [
 export default function SelfPageClient() {
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
+  // 会員登録や他画面からの引き継ぎ入力があればプレフィル(要件⑥)
+  useEffect(() => {
+    const saved = loadFortuneInput();
+    if (saved) {
+      setName(saved.name);
+      setBirthDate(saved.birthDate);
+    }
+  }, []);
   const [phase, setPhase] = useState<"input" | "loading" | "result">("input");
   const [r, setR] = useState<Reading | null>(null);
   const [submitting, setSubmitting] = useState(false); // 二重実行防止(監査Phase1 Critical対応)
 
   async function run() {
     if (!name || !birthDate || submitting) return;
+    saveFortuneInput({ name, birthDate }); // 会員登録後の続き占いへ引き継ぐ(要件⑥)
     setSubmitting(true);
     setPhase("loading");
     track("free_reading_started", { category: "self" });
@@ -151,7 +161,7 @@ export default function SelfPageClient() {
           )}
 
           <ShareRow text={`${r.name}の本質、当たってた気がする — 糸町の少年`} />
-          <FloatingCTA label="この結果について、僕に聞く" href="/consult?category=SELF" />
+          <FloatingCTA label="会員登録して、続きを占う" href="/auth/signup?from=/self" />
         </div>
       )}
           <AffSlot />

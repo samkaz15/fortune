@@ -33,11 +33,31 @@ export async function GET(req: NextRequest) {
 }
 
 async function handleReport(req: NextRequest, userId: string) {
+  // 入力ファースト(要件③ 2026-07-08): 画面で入力された名前・生年月日を受け取り、
+  // プロフィールへ反映してから診断する(未登録なら作成、変更されていれば更新)。
+  // レポートのキャッシュ単位(userId×reportDate)は従来どおり=DB変更なし。
+  const inputName = req.nextUrl.searchParams.get("name")?.trim() ?? "";
+  const inputBirthDate = req.nextUrl.searchParams.get("birthDate") ?? "";
+  const validInput =
+    inputName.length > 0 && inputName.length <= 40 && /^\d{4}-\d{2}-\d{2}$/.test(inputBirthDate);
+
   // avatar列が本番DBに未追加でも落ちないよう、必要カラムのみ明示select(2026-07-07再発防止)
-  const profile = await prisma.userProfile.findUnique({
+  let profile = await prisma.userProfile.findUnique({
     where: { userId },
     select: { name: true, birthDate: true },
   });
+  if (validInput) {
+    const bd = new Date(inputBirthDate + "T00:00:00Z");
+    const changed = !profile || profile.name !== inputName || profile.birthDate.getTime() !== bd.getTime();
+    if (changed) {
+      await prisma.userProfile.upsert({
+        where: { userId },
+        create: { userId, name: inputName, birthDate: bd },
+        update: { name: inputName, birthDate: bd },
+      });
+      profile = { name: inputName, birthDate: bd };
+    }
+  }
   if (!profile) {
     return NextResponse.json({ error: "PROFILE_REQUIRED" }, { status: 409 });
   }

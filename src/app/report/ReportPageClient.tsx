@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ScoreOrb } from "@/components/ScoreOrb";
 import { GlassMosaic, ScrollProgress, ShareRow, AffSlot, DramaticLoading, PrimaryButton } from "@/components/ui-common";
+import { saveFortuneInput, loadFortuneInput } from "@/lib/fortune-input";
 
 interface Report {
   reportDate: string;
@@ -25,12 +26,26 @@ interface Report {
 export default function ReportPageClient() {
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<{ message: string; href: string; label: string } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState<"today" | "week" | "month" | "nextMonth">("today");
+  // 入力ファースト(要件③ 2026-07-08): 診断前に必ず名前・生年月日を入力する
+  const [name, setName] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [started, setStarted] = useState(false);
   // 期間ごとの取得結果をキャッシュ(タブ切替を即時反応に / 2026-07-07 速度改善)
   const cacheRef = useRef<Record<string, Report>>({});
 
+  // 会員登録や他画面からの引き継ぎ入力があればプレフィル(要件⑥: 体験を途切れさせない)
   useEffect(() => {
+    const saved = loadFortuneInput();
+    if (saved) {
+      setName(saved.name);
+      setBirthDate(saved.birthDate);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!started) return; // 診断開始前はフェッチしない(入力ファースト)
     const cached = cacheRef.current[period];
     if (cached) {
       setReport(cached);
@@ -42,9 +57,8 @@ export default function ReportPageClient() {
     const startedAt = Date.now(); // 最低表示時間の計測開始(監査Phase1 Critical対応)
     const MIN_LOADING_MS = 2000;
     const fetchReport = (coords?: { lat: number; lon: number }) => {
-      const qs = coords
-        ? `?period=${period}&lat=${coords.lat}&lon=${coords.lon}`
-        : `?period=${period}`;
+      const base = `?period=${period}&name=${encodeURIComponent(name)}&birthDate=${encodeURIComponent(birthDate)}`;
+      const qs = coords ? `${base}&lat=${coords.lat}&lon=${coords.lon}` : base;
       fetch(`/api/report/today${qs}`)
         .then(async (res) => {
           if (res.status === 401) {
@@ -85,7 +99,54 @@ export default function ReportPageClient() {
     } else {
       fetchReport();
     }
-  }, [period]);
+    // name/birthDateは診断開始時点の値で固定する(startedがトリガー)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period, started]);
+
+  if (!started) {
+    const canStart = name.trim().length > 0 && /^\d{4}-\d{2}-\d{2}$/.test(birthDate);
+    return (
+      <div className="flex flex-col gap-5 px-5 pt-4 pb-8">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/character/report_hero.jpg" alt="糸町の少年" className="mb-1 h-36 w-full rounded-card border border-ink-700 object-cover shadow-lantern" style={{ objectPosition: "center 30%" }} />
+        <h1 className="font-display text-lg text-paper-50">今日の運勢</h1>
+        <p className="text-center text-[11px] text-paper-500">お名前と生年月日から、今日のあなたの流れを占います</p>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-bold text-paper-300">お名前(漢字フルネーム)</span>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="糸町 蛙太"
+            maxLength={40}
+            className="rounded-full border border-ink-600 bg-ink-950 px-5 py-3 text-sm text-paper-100 outline-none focus:border-gold-500"
+          />
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-bold text-paper-300">生年月日</span>
+          <input
+            type="date"
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
+            className="rounded-full border border-ink-600 bg-ink-950 px-5 py-3 text-sm text-paper-100 outline-none focus:border-gold-500"
+          />
+        </label>
+        <button
+          onClick={() => {
+            if (!canStart) return;
+            saveFortuneInput({ name: name.trim(), birthDate });
+            setLoading(true);
+            setStarted(true);
+          }}
+          disabled={!canStart}
+          className="mt-2 rounded-full bg-gold-500 py-3.5 text-sm font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] transition active:translate-y-1 active:shadow-none disabled:opacity-40"
+        >
+          診断を開始する
+        </button>
+        <AffSlot />
+      </div>
+    );
+  }
 
   if (loading) {
     return <DramaticLoading messages={["糸をたどっています、、", "今日の流れと重ねています（65%）", "見えました。"]} />;
@@ -195,7 +256,7 @@ export default function ReportPageClient() {
         </div>
         <div className="absolute inset-0 flex flex-col items-center justify-end bg-gradient-to-b from-transparent via-ink-950/70 to-ink-950/95 p-5 text-center">
           <p className="mb-3 text-[11px] font-bold text-gold-400">✦ ここから先は、直接お話しします</p>
-          <PrimaryButton href="/consult" size="sm" textSize="text-sm">
+          <PrimaryButton href="/auth/signup?from=/report" size="sm" textSize="text-sm">
             この先を、僕から聞く
           </PrimaryButton>
           <p className="mt-2 text-[10px] text-paper-500">
@@ -207,10 +268,10 @@ export default function ReportPageClient() {
       </section>
 
       <Link
-        href="/consult"
+        href="/auth/signup?from=/report"
         className="rounded-full border border-gold-500/50 py-3 text-center text-sm font-bold text-gold-400"
       >
-        もっと詳しく相談する
+        会員登録して、続きを占う
       </Link>
     </div>
   );

@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { track } from "@/lib/track-client";
+import { loadFortuneInput } from "@/lib/fortune-input";
 
 export default function SignupPage() {
   return (
@@ -16,6 +17,9 @@ function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const referralCode = searchParams.get("ref") ?? undefined;
+  // 占い画面からの遷移元(要件⑥)。オープンリダイレクト防止のため内部パスのみ許可
+  const fromParam = searchParams.get("from");
+  const returnTo = fromParam && /^\/(?!\/)/.test(fromParam) ? fromParam : "/mypage";
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -30,6 +34,18 @@ function SignupForm() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // 占い画面で入力済みの名前・生年月日を引き継いでプレフィル(要件⑥: 体験を途切れさせない)
+    const saved = loadFortuneInput();
+    if (saved) {
+      const raw = saved.name.replace(/[\s\u3000]+/g, " ").trim();
+      const [family, ...rest] = raw.split(" ");
+      setForm((prev) => ({
+        ...prev,
+        familyName: prev.familyName || (rest.length > 0 ? family : raw.slice(0, 1)),
+        givenName: prev.givenName || (rest.length > 0 ? rest.join("") : raw.slice(1)),
+        birthDate: prev.birthDate || saved.birthDate,
+      }));
+    }
     track("signup_started", { hasReferral: Boolean(referralCode) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -53,7 +69,7 @@ function SignupForm() {
       setError(data.error === "EMAIL_TAKEN" ? "このメールアドレスは登録済みです。" : "登録に失敗しました。");
       return;
     }
-    router.push("/mypage");
+    router.push(returnTo);
   }
 
   return (
