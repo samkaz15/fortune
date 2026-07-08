@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   res.cookies.set("dev_user_id", user.id, {
     httpOnly: true,
     sameSite: "lax",
-    maxAge: 60 * 60 * 24, // 24時間有効(CEO要求 2026-07-07)
+    maxAge: 60 * 60 * 12, // 12時間(要件④ 2026-07-08: 無操作12時間で自動ログアウト。middlewareが操作毎に延長)
     path: "/",
   });
   return res;
