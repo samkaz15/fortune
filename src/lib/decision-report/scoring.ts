@@ -47,13 +47,16 @@
  *  80-94  : 約14%  (非常に良い日)
  *  95-100 : 約2%   (人生でも数回レベル)
  */
-import { calculateShichu } from "@/lib/fortune-engine/shichu";
+import { calculateShichu, stemBranchIndexFromDate } from "@/lib/fortune-engine/shichu";
+import { calculateKyusei } from "@/lib/fortune-engine/kyusei";
 
 export interface ScoreBreakdown {
   yearScore: number; // 0-100
   monthScore: number; // 0-100
   dayScore: number; // 0-100
   elementScore: number; // 0-100 命式(日主)との五行相性
+  kyuseiScore: number; // 0-100 九星気学(本命星×日家九星)※日次変動(要件⑤ 2026-07-08)
+  branchHarmony: number; // 0-100 十二支の支合・冲(誕生日柱の支×対象日の支)※日次変動
   waveAlignment: number; // 0-100 年月日の運気の重なり具合
   positiveFactor: number; // 0-100 吉要素
   negativeFactor: number; // 0-100 凶要素(高いほど悪影響)
@@ -103,6 +106,23 @@ export function calculateDailyScore(params: {
   const dayMaster = birthSelfShichu.element as Gogyo;
   const elementScore = elementRelationScore(dayMaster, dayShichu.element as Gogyo);
 
+  // ---- 4b: 九星気学(要件⑤ 2026-07-08追加)。本命星×日家九星。9日周期の日次変動 ----
+  const kyuseiScore = calculateKyusei(birthDate, targetDate).score;
+
+  // ---- 4c: 十二支の支合・冲(誕生日柱の支×対象日の支)。12日周期の日次変動 ----
+  // 冲(真向かい=6)は最も厳しく、三合(4・8)と支合(隣接の合)は良い、という伝統的関係の簡易化
+  const birthBranch = stemBranchIndexFromDate(birthDate) % 12;
+  const dayBranch = stemBranchIndexFromDate(targetDate) % 12;
+  const branchDiff = Math.min((dayBranch - birthBranch + 12) % 12, (birthBranch - dayBranch + 12) % 12); // 0-6
+  const branchHarmony =
+    branchDiff === 6 ? 28 // 冲
+    : branchDiff === 4 ? 84 // 三合
+    : branchDiff === 0 ? 70 // 同支
+    : branchDiff === 1 ? 64
+    : branchDiff === 3 ? 52
+    : branchDiff === 2 ? 58
+    : 44; // 5(準冲)
+
   // ---- 5: 運気の波の重なり(年運・月運・日運のバラつきが小さいほど「波が重なっている」) ----
   const scores = [yearScore, monthScore, dayScore];
   const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
@@ -116,19 +136,30 @@ export function calculateDailyScore(params: {
   const negativeFactor = Math.max(0, Math.min(100, Math.max(0, -envModifier) * 8));
 
   // ---- 合成: 加重算術平均 + 加重幾何平均のブレンド(AND条件的性質を注入) ----
+  // 重み(2026-07-08 v3改訂・要件⑤):
+  // 旧配分は年運+月運で0.40を占め、月内でほぼ固定のアンカーとなって
+  // 日次変動が±1〜3点に潰れていた(「毎日61点」問題の根本原因)。
+  // v3では日次で動く観測量(日運・九星・支合冲)に0.55を配分し、
+  // 年運・月運は「基調」として0.17に抑える。周期の異なる3系統
+  // (60干支日柱・9日周期の九星・12日周期の支)の合成により、
+  // 単調な繰り返しに見えない自然な日次変動を作る。
   const weights: Record<string, number> = {
-    year: 0.2,
-    month: 0.2,
-    day: 0.2,
-    element: 0.15,
-    wave: 0.1,
-    positive: 0.1,
-    negative: 0.05,
+    year: 0.07,
+    month: 0.10,
+    day: 0.25,
+    kyusei: 0.17,
+    branch: 0.13,
+    element: 0.10,
+    wave: 0.06,
+    positive: 0.08,
+    negative: 0.04,
   };
   const positives: Record<string, number> = {
     year: yearScore,
     month: monthScore,
     day: dayScore,
+    kyusei: kyuseiScore,
+    branch: branchHarmony,
     element: elementScore,
     wave: waveAlignment,
     positive: positiveFactor,
@@ -144,12 +175,13 @@ export function calculateDailyScore(params: {
   // ブレンド比率を抑えて後段のリスケールで分散が過度に潰れないようにする)
   const blended = arithmetic * 0.8 + geometric * 0.2;
 
-  // ---- 統計的補正: 実測基準値をもとに平均50・標準偏差16の分布へ線形リスケール ----
-  // 7要素の加重平均は中心極限定理により素の分散が小さくなる(実測: 3000サンプルで
-  // mean≈62, std≈7)。これを「毎日の運勢に強弱が出る」目標分布(mean50, std16)へ引き伸ばす。
-  const RAW_CENTER = 62;
-  const RAW_STD = 7;
-  const TARGET_STD = 16;
+  // ---- 統計的補正: 実測基準値をもとに平均50・標準偏差17の分布へ線形リスケール ----
+  // 9要素の加重平均は中心極限定理により素の分散が小さくなる(v3実測: 5ユーザー×180日で
+  // blended mean≈61.4, std≈6.8)。「毎日の運勢に強弱が出る」目標分布(mean≈50, std17)へ引き伸ばす。
+  // TARGET_STD 16→17(2026-07-08): 旧値では最大値が86で頭打ちし90点台が事実上出現しなかったため。
+  const RAW_CENTER = 61.4;
+  const RAW_STD = 6.8;
+  const TARGET_STD = 17;
   const rescaled = 50 + (blended - RAW_CENTER) * (TARGET_STD / RAW_STD);
   const final = Math.max(2, Math.min(99, Math.round(rescaled)));
 
@@ -160,6 +192,8 @@ export function calculateDailyScore(params: {
     monthScore,
     dayScore,
     elementScore,
+    kyuseiScore,
+    branchHarmony,
     waveAlignment,
     positiveFactor,
     negativeFactor,

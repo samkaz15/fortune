@@ -76,10 +76,10 @@ export default function LovePageClient() {
               <p className="mt-2 text-xs text-paper-400">関係には、まだ言葉になっていない部分があります</p>
             </div>
             <div className="rounded-card border border-ink-700 bg-ink-900/70 p-5">
-              <label className="mb-1 block text-[11px] font-bold text-paper-100">あなたの名前<span className="ml-1 font-normal text-paper-500">ニックネームでOK</span></label>
-              <input value={name} onChange={(e) => setName(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-rose-400" placeholder="糸子" />
-              <label className="mb-1 block text-[11px] font-bold text-paper-100">相手の名前<span className="ml-1 font-normal text-paper-500">名前だけでOK</span></label>
-              <input value={partnerName} onChange={(e) => setPartnerName(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-rose-400" placeholder="太郎" />
+              <label className="mb-1 block text-[11px] font-bold text-paper-100">あなたの名前<span className="ml-1 font-normal text-paper-500">フルネーム(姓と名の間にスペース)</span></label>
+              <input value={name} onChange={(e) => setName(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-rose-400" placeholder="糸子 瞳" />
+              <label className="mb-1 block text-[11px] font-bold text-paper-100">相手の名前<span className="ml-1 font-normal text-paper-500">フルネーム(姓と名の間にスペース)</span></label>
+              <input value={partnerName} onChange={(e) => setPartnerName(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-rose-400" placeholder="糸子 太郎" />
               <PrimaryButton onClick={run} disabled={!name || !partnerName || submitting}>相性を占う</PrimaryButton>
             </div>
 
@@ -122,6 +122,12 @@ export default function LovePageClient() {
             <ScrollProgress />
             <div className="mb-4 rounded-card border border-ink-700 bg-ink-900/70 p-5 text-center">
               <p className="text-[9px] font-bold tracking-widest text-rose-300">SCORE ｜ ふたりの縁</p>
+              {/* フルネーム表示(2026-07-08 追加要件③) */}
+              <div className="mt-2 flex items-center justify-center gap-3 text-sm text-paper-100">
+                <span className="font-bold">{name}</span>
+                <span className="text-rose-300">✕</span>
+                <span className="font-bold">{partnerName}</span>
+              </div>
               <p className="mt-1 text-4xl font-bold text-rose-300">{reading.score}<span className="text-sm">点</span></p>
               <p className="mt-1 text-[11px] text-paper-400">{reading.scoreComment}</p>
               <div className="mt-4 text-left">

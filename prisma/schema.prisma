@@ -356,6 +356,7 @@ model DailyReport {
   advice         String
   todayAction    String
   scoreBreakdown Json // {base, envModifier, themeBonus} 監査・スコアリング改善用
+  details        Json? // 出来事/注意/おすすめ各3つ(理由付き)+総評(要件⑤ 2026-07-08)。旧行はnull
   generatedBy    String   @default("llm") // llm | fallback
   createdAt      DateTime @default(now())
 

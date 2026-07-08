@@ -10,6 +10,7 @@ import path from "node:path";
 import { z } from "zod";
 import { interpretDayStem } from "@/lib/fortune-engine/interpretation-dictionary";
 import { calculateShichu } from "@/lib/fortune-engine/shichu";
+import { calculateKyusei, KyuseiSummary } from "@/lib/fortune-engine/kyusei";
 import { calculateSanmei } from "@/lib/fortune-engine/sanmei";
 import { calculateHoroscope } from "@/lib/fortune-engine/horoscope";
 import { calculateSeimei } from "@/lib/fortune-engine/seimei";
@@ -38,10 +39,25 @@ const reportSchema = z.object({
 
 export type ReportContent = z.infer<typeof reportSchema>;
 
+/** 理由付きの1項目(要件⑤ 2026-07-08: 「なぜそうなのか」まで必ず添える) */
+export interface DetailItem {
+  text: string;
+  reason: string;
+}
+
+/** 内容拡充ブロック(要件⑤)。占術シグナルから決定論的に生成し、LLMの成否に依存しない */
+export interface ReportDetails {
+  events: [DetailItem, DetailItem, DetailItem]; // 今日起こりやすい出来事
+  cautionPoints: [DetailItem, DetailItem, DetailItem]; // 今日注意すること(理由付き)
+  recommendations: [DetailItem, DetailItem, DetailItem]; // 今日おすすめの行動
+  overview: string; // 今日の総評(200〜300字・前向きに締める)
+}
+
 export interface DailyReportResult extends ReportContent {
   score: number;
   stars: number;
   scoreBreakdown: ScoreBreakdown;
+  details: ReportDetails;
   generatedBy: "llm" | "fallback";
 }
 
@@ -80,6 +96,7 @@ export async function generateDailyReport(params: {
   const sanmei = calculateSanmei(profile.birthDate); // ビジネス・才能
   const horoscope = calculateHoroscope(profile.birthDate); // 心理・感情
   const seimei = calculateSeimei(profile.familyName, profile.givenName); // 人間関係・社会運
+  const kyusei = calculateKyusei(profile.birthDate, date); // 九星気学(要件⑤ 2026-07-08追加): 日々の巡り
 
   const fortuneKeyword = extractFortuneKeyword(shichu.advice);
 
@@ -118,14 +135,27 @@ export async function generateDailyReport(params: {
     },
   };
 
+  // ---- ⑥内容拡充ブロック(要件⑤ 2026-07-08): LLMの成否に依存せず占術シグナルから決定論生成 ----
+  const details = buildDailyDetails({
+    periodLabel: params.periodLabel ?? "今日",
+    score: breakdown.final,
+    stem: interpretDayStem(shichu.dayStem),
+    shichuAdvice: shichu.advice,
+    horoscopeKeyword: horoscope.keyword,
+    kyusei,
+    branchHarmony: breakdown.branchHarmony,
+    env,
+    theme: userTheme.theme ?? fortuneKeyword,
+  });
+
   const content = await generateWithRetry(llmInput);
   if (content) {
-    return { ...content, score: breakdown.final, stars: breakdown.stars, scoreBreakdown: breakdown, generatedBy: "llm" };
+    return { ...content, score: breakdown.final, stars: breakdown.stars, scoreBreakdown: breakdown, details, generatedBy: "llm" };
   }
 
   // ---- フォールバック(LLM失敗時。ユーザーにエラーを見せない) ----
   const fallback = buildFallbackReport(llmInput);
-  return { ...fallback, score: breakdown.final, stars: breakdown.stars, scoreBreakdown: breakdown, generatedBy: "fallback" };
+  return { ...fallback, score: breakdown.final, stars: breakdown.stars, scoreBreakdown: breakdown, details, generatedBy: "fallback" };
 }
 
 /** shichuのadvice文から運勢キーワードを1語抽出する(決定論的マッピング) */
@@ -179,6 +209,71 @@ async function generateWithRetry(input: LlmInput): Promise<ReportContent | null>
     }
   }
   return null;
+}
+
+
+/**
+ * 内容拡充ブロックの決定論生成(要件⑤ 2026-07-08)。
+ * 「今日起こりやすい出来事」「注意すること」「おすすめの行動」各3つを理由付きで、
+ * さらに200〜300字の総評を、九星気学・四柱推命(支の関係)・ホロスコープ・環境の
+ * シグナルだけから組み立てる。乱数は使わず、日付×ユーザーで毎日内容が変わる。
+ */
+function buildDailyDetails(m: {
+  periodLabel: string;
+  score: number;
+  stem: { state: string; description: string; action: string };
+  shichuAdvice: string;
+  horoscopeKeyword: string;
+  kyusei: KyuseiSummary;
+  branchHarmony: number;
+  env: EnvironmentFeatures;
+  theme: string;
+}): ReportDetails {
+  const { periodLabel: L, score, stem, kyusei, branchHarmony, env, theme } = m;
+  const good = score >= 60;
+  const kyuseiGood = kyusei.score >= 66;
+  const harmony = branchHarmony >= 64;
+  const clash = branchHarmony <= 36; // 冲(支がぶつかる日)
+
+  const events: [DetailItem, DetailItem, DetailItem] = [
+    kyuseiGood
+      ? { text: "人からの声かけや紹介など、外から流れが入ってきやすい", reason: `${L}は${kyusei.dayStarName}が巡る日で、あなたの本命星「${kyusei.userStar}」を後押しする関係。外から来るものが味方につく配置です。` }
+      : { text: "自分のペースを乱される小さな割り込みが入りやすい", reason: `${L}は${kyusei.dayStarName}の日で、本命星「${kyusei.userStar}」とはエネルギーの向きが揃わない配置。外からの流れに振り回されやすい分、自分の軸が試されます。` },
+    harmony
+      ? { text: "会話や相談が思った以上にスムーズに進みやすい", reason: `生まれ日の支と${L}の支が調和する巡り(支合・三合に近い関係)。相手との呼吸が合いやすく、まとまる話はまとまる日です。` }
+      : clash
+        ? { text: "予定の変更やすれ違いが起きやすい", reason: `生まれ日の支と${L}の支が正面からぶつかる「冲」に近い巡り。悪い日ではなく「予定が動く日」。変更前提で余白を持つと逆に得をします。` }
+        : { text: "淡々と進む一方で、後回しにしていた用事が顔を出しやすい", reason: `支の巡りが可もなく不可もない中間の関係。大きな波がない分、溜まっていたものに手を付けるのに向いた流れです。` },
+    good
+      ? { text: `「${theme}」に関して、判断材料が揃う出来事がありそう`, reason: `総合スコア${score}点の追い風の${L}は、${stem.state}のあなたの型が素直に通ります。迷っていたことに答えを出すきっかけが来やすい日です。` }
+      : { text: `「${theme}」について、一度立ち止まって考え直したくなる場面がありそう`, reason: `総合スコア${score}点と力を溜める側の${L}。${stem.description}流れが穏やかな日ほど、見直しの質は上がります。` },
+  ];
+
+  const cautionPoints: [DetailItem, DetailItem, DetailItem] = [
+    clash
+      ? { text: "大事な約束の「即決」は避ける", reason: "支がぶつかる巡りの日は、その場の空気で決めたことが後で動きやすいため。一晩置くだけで精度が大きく変わります。" }
+      : { text: "予定の詰め込みすぎに注意", reason: `${L}の空気は「${env.keyword}」。余白のない計画は、この空気の日には小さなずれが連鎖しやすいためです。` },
+    kyuseiGood
+      ? { text: "来た話に乗るときこそ、条件の確認だけ丁寧に", reason: "外から流れが入る日は、良い話と紛らわしい話が同時に来ます。巡りが良い日ほど確認の一手間が効きます。" }
+      : { text: "他人のペースに合わせすぎない", reason: `本命星「${kyusei.userStar}」と${L}の星の向きが揃わない日は、合わせるほど消耗します。自分の予定を先に置いてから応じるのが正解です。` },
+    good
+      ? { text: "勢いに任せた深夜の判断・送信は控える", reason: "追い風の日の唯一の落とし穴は「勢い余り」。夜は判断の精度が落ちるので、良い流れは翌朝に持ち越すほうが結果が良くなります。" }
+      : { text: "自分への評価を今日決めない", reason: "運気の波が低めの日に下した自己評価は、実際より厳しく出ます。今日の停滞は実力ではなく巡りの問題です。" },
+  ];
+
+  const recommendations: [DetailItem, DetailItem, DetailItem] = [
+    { text: `朝のうちに「${stem.action}」を5分だけ`, reason: `${stem.state}のあなたの型と${L}の流れが噛み合う動き方だからです。朝に置くと1日の消耗が減り、運気の通り道ができます。` },
+    { text: m.horoscopeKeyword.split("。")[0], reason: `星回りから見た${L}のあなたの心理の回復スイッチがここにあります。気分が乗らない日ほど効きます。` },
+    good
+      ? { text: `「${theme}」でいちばん気になっている相手・場所に自分から一歩`, reason: `スコア${score}点の${L}は、踏み込んだ分だけ返ってくる配分。受け身で待つより、先に動いた人に流れが寄ります。` }
+      : { text: "身の回りをひとつだけ整える(机・受信箱・予定表のどれか)", reason: "力を溜める日の開運行動は「整える」こと。次に波が上がったとき、すぐ動ける状態を作った人から順に運が回ってきます。" },
+  ];
+
+  const overview = good
+    ? `${L}のあなたは${score}点、${stem.state}の力が素直に通る追い風の一日です。${kyuseiGood ? `${kyusei.dayStarName}の巡りが外からの流れを運んでくるので、来た話には条件確認だけ添えて乗ってみてください。` : `外の流れに頼らず、自分から仕掛けた動きがそのまま結果につながります。`}${clash ? "予定は動きやすい日なので、変更は「悪い知らせ」ではなく流れの調整だと受け取って大丈夫。" : "会話や相談はまとまりやすいので、後回しにしていた話を切り出すのにも向いています。"}夜は勢いを翌朝に持ち越す意識だけ忘れずに。今日のあなたなら、決めたことはちゃんと形になります。いい一日にしましょう。`
+    : `${L}のあなたは${score}点、派手さより「整える」が効く一日です。${stem.description}${clash ? "支がぶつかる巡りで予定は動きやすいですが、それは流れの調整であって後退ではありません。" : `${kyuseiGood ? "外からの声かけには恵まれる日なので、受け取るものは受け取って大丈夫。" : "外に合わせるより自分のリズムを守るほうが消耗しません。"}`}今日の停滞に見えるものは、次の波のための助走です。朝の5分だけ「${stem.action}」に使って、あとは余白を持って過ごしてください。巡りは必ず戻ってきます。明日のあなたが楽になる準備を、今日のあなたがしてあげる日です。`;
+
+  return { events, cautionPoints, recommendations, overview };
 }
 
 /**

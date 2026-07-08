@@ -6,6 +6,17 @@ import { ScoreOrb } from "@/components/ScoreOrb";
 import { GlassMosaic, ScrollProgress, ShareRow, AffSlot, DramaticLoading, PrimaryButton } from "@/components/ui-common";
 import { saveFortuneInput, loadFortuneInput } from "@/lib/fortune-input";
 
+interface DetailItem {
+  text: string;
+  reason: string;
+}
+interface ReportDetails {
+  events: DetailItem[];
+  cautionPoints: DetailItem[];
+  recommendations: DetailItem[];
+  overview: string;
+}
+
 interface Report {
   reportDate: string;
   score: number;
@@ -15,6 +26,7 @@ interface Report {
   cautions: string[];
   advice: string;
   todayAction: string;
+  details?: ReportDetails | null; // 要件⑤ 2026-07-08の拡充ブロック(旧キャッシュ行はnull)
   remainingFreeQuota?: number;
   isSubscribed?: boolean;
 }
@@ -32,6 +44,9 @@ export default function ReportPageClient() {
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [started, setStarted] = useState(false);
+  // ④UX改善(2026-07-08): 初回のみ入力。プロフィール登録済みならワンタップで即結果へ。
+  // auth: checking=判定中 / guest=未ログイン / needInput=ログイン済み・初回入力 / ready=登録済み
+  const [gate, setGate] = useState<"checking" | "guest" | "needInput" | "ready">("checking");
   // 期間ごとの取得結果をキャッシュ(タブ切替を即時反応に / 2026-07-07 速度改善)
   const cacheRef = useRef<Record<string, Report>>({});
 
@@ -42,6 +57,26 @@ export default function ReportPageClient() {
       setName(saved.name);
       setBirthDate(saved.birthDate);
     }
+  }, []);
+
+  // ④初回のみ入力(2026-07-08): ログイン済み+プロフィール登録済みなら入力画面を挟まず即診断。
+  // 入力情報の保持はサーバー側(UserProfile)+12時間スライディングセッションが担うため、
+  // Cookie/キャッシュが消えた場合は未ログイン扱い=再ログイン・再入力(要件④の整合)。
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((d) => {
+        if (!d.loggedIn) {
+          setGate("guest");
+        } else if (d.hasProfile) {
+          setGate("ready");
+          setStarted(true); // 押した瞬間に結果へ(入力画面を挟まない)
+          setLoading(true);
+        } else {
+          setGate("needInput"); // 初回ログイン時のみ入力
+        }
+      })
+      .catch(() => setGate("needInput"));
   }, []);
 
   useEffect(() => {
@@ -57,7 +92,9 @@ export default function ReportPageClient() {
     const startedAt = Date.now(); // 最低表示時間の計測開始(監査Phase1 Critical対応)
     const MIN_LOADING_MS = 2000;
     const fetchReport = (coords?: { lat: number; lon: number }) => {
-      const base = `?period=${period}&name=${encodeURIComponent(name)}&birthDate=${encodeURIComponent(birthDate)}`;
+      // 登録済みユーザーはサーバー保存のプロフィールで診断(毎回の入力を廃止・要件④)
+      const inputQs = gate === "ready" ? "" : `&name=${encodeURIComponent(name)}&birthDate=${encodeURIComponent(birthDate)}`;
+      const base = `?period=${period}${inputQs}`;
       const qs = coords ? `${base}&lat=${coords.lat}&lon=${coords.lon}` : base;
       fetch(`/api/report/today${qs}`)
         .then(async (res) => {
@@ -103,6 +140,26 @@ export default function ReportPageClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period, started]);
 
+  if (gate === "checking") {
+    return <div className="px-5 pt-24 text-center text-sm text-paper-500">読み込み中...</div>;
+  }
+
+  if (gate === "guest") {
+    return (
+      <div className="flex flex-col gap-5 px-5 pt-4 pb-8">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/character/report_hero.jpg" alt="糸町の少年" className="mb-1 h-36 w-full rounded-card border border-ink-700 object-cover shadow-lantern" style={{ objectPosition: "center 30%" }} />
+        <h1 className="font-display text-lg text-paper-50">今日の運勢</h1>
+        <p className="text-center text-xs leading-relaxed text-paper-300">
+          ログインすると、毎日ワンタップで今日の運勢が見られます。<br />初回に名前と生年月日を登録するだけで、次からは入力不要です。
+        </p>
+        <Link href="/auth/login" className="rounded-full bg-gold-500 py-3.5 text-center text-sm font-bold text-ink-950">ログインして占う</Link>
+        <Link href="/auth/signup?from=/report" className="rounded-full border border-gold-500/50 py-3 text-center text-sm font-bold text-gold-400">はじめての方はこちら(無料登録)</Link>
+        <AffSlot />
+      </div>
+    );
+  }
+
   if (!started) {
     const canStart = name.trim().length > 0 && /^\d{4}-\d{2}-\d{2}$/.test(birthDate);
     return (
@@ -110,7 +167,7 @@ export default function ReportPageClient() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/character/report_hero.jpg" alt="糸町の少年" className="mb-1 h-36 w-full rounded-card border border-ink-700 object-cover shadow-lantern" style={{ objectPosition: "center 30%" }} />
         <h1 className="font-display text-lg text-paper-50">今日の運勢</h1>
-        <p className="text-center text-[11px] text-paper-500">お名前と生年月日から、今日のあなたの流れを占います</p>
+        <p className="text-center text-[11px] text-paper-500">初回のみ、お名前と生年月日をご登録ください。次回からは入力不要で、押した瞬間に結果が出ます</p>
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-bold text-paper-300">お名前(漢字フルネーム)</span>
           <input
@@ -208,18 +265,59 @@ export default function ReportPageClient() {
         <p className="text-sm leading-relaxed text-paper-100">{report.summary}</p>
       </section>
 
-      {/* ④ 注意ポイント3つ */}
+      {/* ④ 今日起こりやすい出来事(要件⑤ 2026-07-08: 理由付き3項目) */}
+      {report.details && (
+        <section className="rounded-card border border-ink-700 bg-ink-900/50 p-5">
+          <h2 className="mb-3 text-xs font-bold text-gold-400">今日、起こりやすいこと</h2>
+          <ul className="space-y-3">
+            {report.details.events.map((e, i) => (
+              <li key={i}>
+                <p className="flex gap-2 text-sm font-bold text-paper-50"><span className="text-gold-400">◆</span><span>{e.text}</span></p>
+                <p className="mt-1 pl-5 text-xs leading-relaxed text-paper-400">{e.reason}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* ⑤ 注意ポイント3つ(detailsがあれば理由付き、旧キャッシュ行は従来表示) */}
       <section className="rounded-card border border-torii-500/40 bg-ink-900/50 p-5">
         <h2 className="mb-3 text-xs font-bold text-torii-500">今日、気をつけること</h2>
-        <ul className="space-y-2">
-          {report.cautions.map((c, i) => (
-            <li key={i} className="flex gap-2 text-sm text-paper-100">
-              <span className="text-torii-500">・</span>
-              <span>{c}</span>
-            </li>
-          ))}
-        </ul>
+        {report.details ? (
+          <ul className="space-y-3">
+            {report.details.cautionPoints.map((c, i) => (
+              <li key={i}>
+                <p className="flex gap-2 text-sm font-bold text-paper-100"><span className="text-torii-500">・</span><span>{c.text}</span></p>
+                <p className="mt-1 pl-4 text-xs leading-relaxed text-paper-400">{c.reason}</p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <ul className="space-y-2">
+            {report.cautions.map((c, i) => (
+              <li key={i} className="flex gap-2 text-sm text-paper-100">
+                <span className="text-torii-500">・</span>
+                <span>{c}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
+
+      {/* ⑥ 今日おすすめの行動(理由付き3項目) */}
+      {report.details && (
+        <section className="rounded-card border border-gold-500/40 bg-gold-500/5 p-5">
+          <h2 className="mb-3 text-xs font-bold text-gold-400">今日、おすすめの行動</h2>
+          <ul className="space-y-3">
+            {report.details.recommendations.map((r2, i) => (
+              <li key={i}>
+                <p className="flex gap-2 text-sm font-bold text-paper-50"><span className="text-gold-400">{i + 1}.</span><span>{r2.text}</span></p>
+                <p className="mt-1 pl-5 text-xs leading-relaxed text-paper-400">{r2.reason}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <AffSlot label="AD SLOT 2" />
 
@@ -245,6 +343,14 @@ export default function ReportPageClient() {
           <p className="text-sm leading-relaxed">{report.advice}</p>
           <p className="mt-3 text-sm leading-relaxed">{report.todayAction}</p>
         </GlassMosaic>
+      )}
+
+      {/* ⑦ 今日の総評(200〜300字・前向きに締める) */}
+      {report.details && (
+        <section className="rounded-card border-2 border-gold-500/60 bg-ink-900/70 p-5">
+          <h2 className="mb-2 text-xs font-bold text-gold-400">今日の総評</h2>
+          <p className="text-sm leading-relaxed text-paper-100">{report.details.overview}</p>
+        </section>
       )}
 
       <ShareRow text={`今日の運勢は${report.score}点。「${report.keywords.userTheme}」の日 — 糸町の少年`} />

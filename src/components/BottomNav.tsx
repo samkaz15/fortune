@@ -10,6 +10,7 @@ import { usePathname } from "next/navigation";
  */
 const TABS = [
   { href: "/", label: "ホーム", icon: "⌂" },
+  { href: "/calendar", label: "運勢カレンダー", icon: "📅" }, // 毎日開く習慣の入口(2026-07-08 追加要件①)
   { href: "/auction", label: "トークション", icon: "📞" },
   { href: "/mypage", label: "マイページ", icon: "👤" },
 ];

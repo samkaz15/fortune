@@ -17,11 +17,15 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: "INVALID_REQUEST" }, { status: 400 });
   const { name, partnerName } = parsed.data;
 
-  // 姓名は分割できない入力もあるため、姓=全体/名=空でスコア化（相対値として一貫）
-  const score = calculateCompatibilityFromNames(
-    { familyName: name, givenName: "" },
-    { familyName: partnerName, givenName: "" }
-  );
+  // フルネーム対応(2026-07-08 追加要件③): スペース(全角/半角)で姓・名を分割して五格を正しく計算する。
+  // スペースなしの入力は先頭1文字=姓のヒューリスティック(report/todayと同じ規則)にフォールバック
+  const splitName = (full: string): { familyName: string; givenName: string } => {
+    const raw = full.replace(/[\s\u3000]+/g, " ").trim();
+    const parts = raw.split(" ");
+    if (parts.length >= 2) return { familyName: parts[0], givenName: parts.slice(1).join("") };
+    return { familyName: raw.slice(0, 1), givenName: raw.slice(1) || raw };
+  };
+  const score = calculateCompatibilityFromNames(splitName(name), splitName(partnerName));
   const closeness = Math.max(40, Math.min(99, score - 5));
   const talk = Math.max(40, Math.min(99, score + 3));
   const energy = Math.max(40, Math.min(99, score - 16));

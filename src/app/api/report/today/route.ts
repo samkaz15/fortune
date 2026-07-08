@@ -112,6 +112,7 @@ async function handleReport(req: NextRequest, userId: string) {
         cautions: result.cautions,
         advice: result.advice,
         todayAction: result.todayAction,
+        details: result.details as object,
         scoreBreakdown: result.scoreBreakdown as unknown as object,
         generatedBy: result.generatedBy,
       },
@@ -140,6 +141,7 @@ function toResponse(r: {
   cautions: unknown;
   advice: string;
   todayAction: string;
+  details?: unknown; // 旧行はnull(要件⑤の拡充ブロック。無ければクライアントは非表示)
   reportDate: Date;
 }) {
   return {
@@ -151,5 +153,6 @@ function toResponse(r: {
     cautions: r.cautions,
     advice: r.advice,
     todayAction: r.todayAction,
+    details: r.details ?? null,
   };
 }

@@ -16,17 +16,20 @@ interface Sections {
   currentFortune: { situation: string; flow: string; caution: string; wind: string };
   love: { now: string; future: string; caution: string };
   work: { now: string; turningPoint: string; successPoint: string };
-  money: { now: string; nearFuture: string; caution: string };
-  health: { physical: string; mental: string; improvement: string };
-  relationships: { now: string; cautionPerson: string; compatibility: string };
-  future: { flow: string; months: string; year: string; turningPoint: string };
-  action: { do: string; avoid: string; boost: string; concrete: string };
-  closing: string;
+  // 05以降は非登録者にはサーバーから送られない(登録で解放・2026-07-08 3段階化)
+  money?: { now: string; nearFuture: string; caution: string };
+  health?: { physical: string; mental: string; improvement: string };
+  relationships?: { now: string; cautionPerson: string; compatibility: string };
+  future?: { flow: string; months: string; year: string; turningPoint: string };
+  action?: { do: string; avoid: string; boost: string; concrete: string };
+  closing?: string;
 }
 
 interface Reading {
   name: string;
+  tier: "guest" | "member" | "paid";
   sections: Sections;
+  memberLocked: boolean; // 非登録: 05〜10が未開放
   wave: number;
   elementNote: string | null;
   deep: { locked: true } | { locked: false; behaviors: string[]; ngEnvironment: string };
@@ -113,7 +116,7 @@ export default function SelfPageClient() {
             <label className="mb-1 block text-[11px] font-bold text-paper-100">名前<span className="ml-1 font-normal text-paper-500">ニックネームでOK</span></label>
             <input value={name} onChange={(e) => setName(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-gold-500" placeholder="糸子" />
             <label className="mb-1 block text-[11px] font-bold text-paper-100">生年月日</label>
-            <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-gold-500" />
+            <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="mb-4 block h-12 w-full min-w-0 appearance-none rounded-xl border border-ink-700 bg-ink-950 px-4 text-sm leading-none text-paper-100 outline-none focus:border-gold-500" style={{ colorScheme: "dark", WebkitAppearance: "none" }} />
             <PrimaryButton onClick={run} disabled={!name || !birthDate || submitting}>診断をはじめる</PrimaryButton>
           </div>
 
@@ -167,27 +170,48 @@ export default function SelfPageClient() {
             ["転機", r.sections.work.turningPoint],
             ["成功ポイント", r.sections.work.successPoint],
           ]} />
+          {r.memberLocked && (
+            <div className="mb-4">
+              <GlassMosaic
+                message={`ここから先(金運・健康運・人間関係・未来・行動指針)は、無料の会員登録で全部読めます。${r.name}さんの続き、ちゃんと用意してあります。`}
+                ctaLabel="無料登録して続きを読む"
+                ctaHref="/auth/signup?from=/self"
+                note="※登録は無料・30秒で完了"
+              >
+                <p className="text-sm leading-relaxed">金運はいま動き出しの手前——そして{r.name}さんの一年先には——</p>
+              </GlassMosaic>
+            </div>
+          )}
+          {r.sections.money && (
           <Section no="05" title="金運" rows={[
             ["現在", r.sections.money.now],
             ["近未来", r.sections.money.nearFuture],
             ["注意点", r.sections.money.caution],
           ]} />
+          )}
+          {r.sections.health && (
           <Section no="06" title="健康運" rows={[
             ["体調面", r.sections.health.physical],
             ["精神面", r.sections.health.mental],
             ["生活改善ポイント", r.sections.health.improvement],
           ]} />
+          )}
+          {r.sections.relationships && (
           <Section no="07" title="人間関係" rows={[
             ["現在", r.sections.relationships.now],
             ["注意人物", r.sections.relationships.cautionPerson],
             ["相性", r.sections.relationships.compatibility],
           ]} />
+          )}
+          {r.sections.future && (
           <Section no="08" title="未来" rows={[
             ["今後の流れ", r.sections.future.flow],
             ["数ヶ月先", r.sections.future.months],
             ["一年先", r.sections.future.year],
             ["重要な転機", r.sections.future.turningPoint],
           ]} />
+          )}
+          {r.sections.action && (
           <div className="mb-4 rounded-card border-2 border-gold-500 bg-ink-900/70 p-5">
             <p className="text-[9px] font-bold tracking-widest text-gold-400">09 ｜ 行動指針</p>
             <dl className="mt-2 space-y-2.5">
@@ -199,10 +223,13 @@ export default function SelfPageClient() {
               ))}
             </dl>
           </div>
+          )}
+          {r.sections.closing && (
           <div className="mb-4 rounded-card border border-gold-500/40 bg-gold-500/5 p-5">
             <p className="text-[9px] font-bold tracking-widest text-gold-400">10 ｜ 糸町の少年から</p>
             <p className="mt-2 text-sm leading-relaxed text-paper-100">{r.sections.closing}</p>
           </div>
+          )}
 
           {r.deep.locked ? (
             <GlassMosaic

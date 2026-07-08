@@ -38,13 +38,26 @@ export async function POST(req: NextRequest) {
     subscribed = Boolean(await prisma.subscription.findFirst({ where: { userId, status: "active" } }));
   }
 
+  // 3段階の出し分け(2026-07-08是正。従来は非登録と登録会員が完全同一で登録メリットがゼロだった):
+  //   非登録    = 01〜04(本質/現在の運勢/恋愛運/仕事運)のみ。続きは会員登録で解放
+  //   登録会員  = 全10セクション
+  //   有料会員  = +深掘り(行動特性・合わない環境)
+  // ロック分はサーバー側で送信しない(クライアント側の目隠しではなく本当に渡さない)
+  const tier: "guest" | "member" | "paid" = !userId ? "guest" : subscribed ? "paid" : "member";
+  const { essence, currentFortune, love, work, ...memberSections } = reading.sections;
+  const sections = tier === "guest" ? { essence, currentFortune, love, work } : reading.sections;
+  void memberSections;
+
   return NextResponse.json({
     name,
-    sections: reading.sections,
+    tier,
+    sections,
+    memberLocked: tier === "guest", // 05〜10が未開放(登録で解放)
     wave: reading.wave,
     elementNote: reading.elementNote,
-    deep: subscribed
-      ? { locked: false, behaviors: reading.deepMaterial.behaviors, ngEnvironment: reading.deepMaterial.ngEnvironment }
-      : { locked: true },
+    deep:
+      tier === "paid"
+        ? { locked: false, behaviors: reading.deepMaterial.behaviors, ngEnvironment: reading.deepMaterial.ngEnvironment }
+        : { locked: true },
   });
 }
