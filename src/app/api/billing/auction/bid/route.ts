@@ -13,9 +13,8 @@ import { requireUserId, AuthRequiredError } from "@/lib/auth";
  * 実施形式(CEO2確定, 2026-07-03): 公式LINE電話・1時間・対応者はCEO本人。
  * 開催日は固定(決め打ち)で、ユーザーは「その日の枠」に入札する。
  *
- * 入札ルール(トークション仕様書 2026-07-05で更新。CEO2の+100円ルールを置き換え):
- * - 現在価格「以上」で入札可能
- * - 同額入札は先に入札したユーザーを優先(最高入札者は交代しない)
+ * 入札ルール(要件② 2026-07-08で更新。旧2026-07-05ルールを置き換え):
+ * - 金額は100円刻み(100の倍数)のみ。初回=開始価格1,000円、以降=現在価格+100円が最低額
  * - キャンセル不可への同意・免責事項への同意(チェックボックス2つ)をサーバー側でも必須検証
  *
  * 実装方針(WBS CL10のリスク注記に対応):
@@ -57,33 +56,33 @@ export async function POST(req: NextRequest) {
   if (ticket.status !== "open" || now < ticket.opensAt || now >= ticket.closesAt) {
     return NextResponse.json({ error: "AUCTION_CLOSED" }, { status: 409 });
   }
-  if (amountJpy < ticket.currentPriceJpy) {
+  // 入札ルール(要件② 2026-07-08。旧「現在価格以上+同額先着」ルールを置き換え):
+  // - 金額は100円刻み(100の倍数)のみ有効
+  // - 初回入札は開始価格(1,000円)ちょうどから。以降は現在価格+100円が最低額
+  //   → 同額入札はルール上発生しないため、旧・同額先着分岐は撤去した
+  const bidCount = await prisma.bid.count({ where: { ticketId } });
+  const minimumAcceptableJpy = bidCount > 0 ? ticket.currentPriceJpy + 100 : ticket.startPriceJpy;
+  if (amountJpy % 100 !== 0) {
     return NextResponse.json(
       {
-        error: "BID_TOO_LOW",
-        message: "現在価格以上の金額を入力してください",
+        error: "BID_INVALID_STEP",
+        message: "入札は100円単位でお願いします",
         currentPriceJpy: ticket.currentPriceJpy,
-        minimumAcceptableJpy: ticket.currentPriceJpy,
+        minimumAcceptableJpy,
       },
       { status: 409 }
     );
   }
-  // 同額入札は先着優先: 最高入札者は交代せず、入札記録のみ残す(仕様書§入札ルール)
-  if (amountJpy === ticket.currentPriceJpy) {
-    const hasBids = await prisma.bid.count({ where: { ticketId } });
-    if (hasBids > 0) {
-      const bid = await prisma.bid.create({
-        data: { ticketId, userId, amountJpy, status: "outbid" },
-      });
-      await prisma.auditLog.create({
-        data: { actorType: "user", actorId: userId, action: "auction_bid", targetType: "auction_ticket", targetId: ticketId, metadata: { amountJpy, result: "tie_first_wins" } },
-      });
-      return NextResponse.json({
-        bidId: bid.id,
+  if (amountJpy < minimumAcceptableJpy) {
+    return NextResponse.json(
+      {
+        error: "BID_TOO_LOW",
+        message: `${minimumAcceptableJpy.toLocaleString()}円以上の金額を入力してください`,
         currentPriceJpy: ticket.currentPriceJpy,
-        message: "同額の先行入札があるため、最高入札者は変わりませんでした",
-      });
-    }
+        minimumAcceptableJpy,
+      },
+      { status: 409 }
+    );
   }
 
   try {

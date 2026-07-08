@@ -39,6 +39,21 @@ export function isOpenNow(ticket: { status: string; opensAt: Date; closesAt: Dat
 }
 
 /**
+ * 開催時刻を迎えたチケットの開始処理(scheduled→open)。
+ * 専用cronは持たず、一覧/ステータスAPIの呼び出し時にlazyに実行する
+ * (終了処理closeExpiredAuctionsと同じフェイルセーフ方針)。
+ * これにより「開催時間になると自動的に開催中UIへ切り替わる」(要件② 2026-07-08)を
+ * ポーリングだけで実現できる。
+ */
+export async function openScheduledAuctions(now: Date = new Date()): Promise<{ opened: number }> {
+  const res = await prisma.auctionTicket.updateMany({
+    where: { status: "scheduled", opensAt: { lte: now }, closesAt: { gt: now } },
+    data: { status: "open" },
+  });
+  return { opened: res.count };
+}
+
+/**
  * 期限切れオークションの終了処理(仕様書§オークション終了処理の順序どおり)
  * 1.終了 2.新規入札停止(status変更で自動的に停止) 3.最終価格確定
  * 4.最高入札者取得(同額は先着) 5.落札者決定 6.決済待ちへ変更

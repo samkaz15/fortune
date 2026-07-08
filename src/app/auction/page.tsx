@@ -23,6 +23,7 @@ interface Ticket {
   description: string;
   profileText: string | null;
   topics: string[] | null;
+  startPriceJpy: number;
   currentPriceJpy: number;
   status: string;
   opensAt: string;
@@ -34,7 +35,9 @@ interface Ticket {
 interface LiveStatus {
   status: string;
   currentPriceJpy: number;
+  bidCount: number;
   version: number;
+  opensAt: string;
   closesAt: string;
   serverNow: string;
   myBidJpy: number | null;
@@ -50,12 +53,35 @@ interface Review {
 
 const POLL_INTERVAL_MS = 5000;
 
+/** 開催日時のJST表示(例: 7月13日(月) 7:00) */
+function formatJstDateTime(iso: string): string {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo", month: "long", day: "numeric", weekday: "short" });
+  const time = d.toLocaleTimeString("ja-JP", { timeZone: "Asia/Tokyo", hour: "numeric", minute: "2-digit" });
+  return `${date} ${time}`;
+}
+
+function formatCountdown(ms: number): string {
+  const totalSec = Math.floor(ms / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hh = Math.floor((totalSec % 86400) / 3600);
+  const mm = Math.floor((totalSec % 3600) / 60);
+  const ss = totalSec % 60;
+  return days > 0
+    ? `${days}日 ${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`
+    : `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}`;
+}
+
 export default function AuctionPage() {
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [live, setLive] = useState<LiveStatus | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [remainMs, setRemainMs] = useState<number>(0);
+  const [remainMs, setRemainMs] = useState<number>(0); // 終了までの残り時間
+  const [untilOpenMs, setUntilOpenMs] = useState<number>(0); // 開催までの残り時間(開催前のみ)
+  const [nextWindow, setNextWindow] = useState<{ opensAt: string; closesAt: string } | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const serverOffsetRef = useRef<number>(0); // serverNow - clientNow
+  const autoSwitchFiredFor = useRef<string | null>(null); // 開催到達時の自動切替を1回に制限
 
   const [modalOpen, setModalOpen] = useState(false);
   const [bidAmount, setBidAmount] = useState("");
@@ -64,16 +90,35 @@ export default function AuctionPage() {
   const [pending, setPending] = useState(false);
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
+  const fetchCatalog = useCallback(async () => {
+    const res = await fetch("/api/auction");
+    if (!res.ok) return;
+    const data = await res.json();
+    const first: Ticket | undefined = (data.tickets ?? [])[0];
+    setTicket(first ?? null);
+    if (data.serverNow) serverOffsetRef.current = new Date(data.serverNow).getTime() - Date.now();
+    // 未出品時のカウントダウン先: 開始時刻が未来の直近ウィンドウ(進行中だが未出品の枠は対象外)
+    const serverNowMs = data.serverNow ? new Date(data.serverNow).getTime() : Date.now();
+    const windows: { opensAt: string; closesAt: string }[] = data.nextWindows ?? [];
+    setNextWindow(windows.find((w) => new Date(w.opensAt).getTime() > serverNowMs) ?? windows[0] ?? null);
+    setLoaded(true);
+  }, []);
+
   useEffect(() => {
+    fetchCatalog();
     (async () => {
-      const [tRes, rRes] = await Promise.all([fetch("/api/auction"), fetch("/api/auction/reviews")]);
-      const tData = await tRes.json();
-      const first: Ticket | undefined = (tData.tickets ?? [])[0];
-      if (first) setTicket(first);
+      const rRes = await fetch("/api/auction/reviews");
       const rData = await rRes.json();
       setReviews(rData.reviews ?? []);
     })();
-  }, []);
+  }, [fetchCatalog]);
+
+  // 開催前(チケット未出品/scheduled)は30秒毎に一覧を再取得し、出品や開始を取りこぼさない
+  useEffect(() => {
+    if (ticket && ticket.status !== "scheduled") return;
+    const t = setInterval(fetchCatalog, 30000);
+    return () => clearInterval(t);
+  }, [ticket, fetchCatalog]);
 
   const poll = useCallback(async () => {
     if (!ticket) return;
@@ -93,12 +138,23 @@ export default function AuctionPage() {
 
   useEffect(() => {
     const t = setInterval(() => {
-      if (!live) return;
       const nowServer = Date.now() + serverOffsetRef.current;
-      setRemainMs(Math.max(0, new Date(live.closesAt).getTime() - nowServer));
+      if (live) setRemainMs(Math.max(0, new Date(live.closesAt).getTime() - nowServer));
+      const opensAtIso = ticket?.status === "scheduled" ? ticket.opensAt : !ticket ? nextWindow?.opensAt : null;
+      if (opensAtIso) {
+        const until = new Date(opensAtIso).getTime() - nowServer;
+        setUntilOpenMs(Math.max(0, until));
+        // 開催時刻到達: サーバー側lazy遷移(scheduled→open)を踏んでUIを自動切替(要件②)。
+        // 同一開催時刻につき1回だけ発火(未出品時の連続再取得を防ぐ。以降は30秒毎の定期再取得が拾う)
+        if (until <= 0 && autoSwitchFiredFor.current !== opensAtIso) {
+          autoSwitchFiredFor.current = opensAtIso;
+          fetchCatalog();
+          poll();
+        }
+      }
     }, 1000);
     return () => clearInterval(t);
-  }, [live]);
+  }, [live, ticket, nextWindow, fetchCatalog, poll]);
 
   async function submitBid() {
     if (!ticket || !live) return;
@@ -126,7 +182,7 @@ export default function AuctionPage() {
       poll();
     } else if (data.error === "AUTH_REQUIRED") {
       setMsg({ type: "err", text: "入札にはログインが必要です。" });
-    } else if (data.error === "BID_TOO_LOW" || data.error === "BID_CONFLICT") {
+    } else if (data.error === "BID_TOO_LOW" || data.error === "BID_INVALID_STEP" || data.error === "BID_CONFLICT") {
       setMsg({ type: "err", text: `${data.message}(現在価格: ${data.currentPriceJpy?.toLocaleString()}円)` });
       poll();
     } else if (data.error === "AUCTION_CLOSED") {
@@ -154,22 +210,42 @@ export default function AuctionPage() {
     }
   }
 
-  if (!ticket) {
+  if (!loaded) {
     return (
-      <main className="mx-auto min-h-screen max-w-md px-4 py-16 text-center text-paper-300">
-        <p className="text-sm">現在、開催中のトークションはありません。</p>
-        <p className="mt-2 text-xs text-paper-500">出品は毎週 月曜7:00〜 と 金曜20:00〜(各24時間)です。</p>
+      <main className="mx-auto min-h-screen max-w-md px-4 py-16 text-center text-paper-500">
+        <p className="text-sm">読み込み中...</p>
       </main>
     );
   }
 
-  const price = live?.currentPriceJpy ?? ticket.currentPriceJpy;
-  const status = live?.status ?? ticket.status;
-  const isOpen = status === "open" && remainMs > 0;
+  // チケット未出品でも完成版UIのレイアウトは表示する(要件②)。
+  // 次回開催ウィンドウを使ったプレースホルダーで描画し、開始と同時に実チケットへ切り替わる。
+  const view: Ticket = ticket ?? {
+    id: "",
+    title: "糸町の少年と話せる1時間",
+    description: "",
+    profileText:
+      "カエルの男の子「糸町の少年」が、公式LINE電話で1時間、あなたの相談に直接お答えします。仕事も恋愛も人間関係も、まとめてどうぞ。",
+    topics: null,
+    startPriceJpy: 1000,
+    currentPriceJpy: 1000,
+    status: "scheduled",
+    opensAt: nextWindow?.opensAt ?? new Date().toISOString(),
+    closesAt: nextWindow?.closesAt ?? new Date().toISOString(),
+    version: 0,
+  };
+
+  const price = live?.currentPriceJpy ?? view.currentPriceJpy;
+  const status = ticket ? (live?.status ?? ticket.status) : "scheduled";
+  const isOpen = Boolean(ticket) && status === "open" && remainMs > 0;
+  const preOpen = !isOpen && (status === "scheduled" || !ticket) && untilOpenMs >= 0 && Boolean(ticket?.status === "scheduled" || nextWindow);
+  const opensAtIso = ticket?.status === "scheduled" ? ticket.opensAt : !ticket ? nextWindow?.opensAt ?? null : null;
+  // 100円刻みルール: 入札0件なら開始価格ちょうど、以降は現在価格+100円が最低額
+  const minBidJpy = (live?.bidCount ?? ticket?._count?.bids ?? 0) > 0 ? price + 100 : (ticket?.startPriceJpy ?? 1000);
   const hh = Math.floor(remainMs / 3600000);
   const mm = Math.floor((remainMs % 3600000) / 60000);
   const ss = Math.floor((remainMs % 60000) / 1000);
-  const topics: string[] = Array.isArray(ticket.topics) ? (ticket.topics as string[]) : [];
+  const topics: string[] = Array.isArray(view.topics) ? (view.topics as string[]) : [];
 
   return (
     <main className="mx-auto min-h-screen max-w-md px-4 pb-24 pt-8 text-paper-100">
@@ -190,23 +266,23 @@ export default function AuctionPage() {
 
       {/* ===== ① プロフィール・現在価格・残り時間・入札 ===== */}
       <section className="rounded-card border border-ink-700 bg-ink-900/60 p-5">
-        <h2 className="text-base font-bold text-paper-100">{ticket.title}</h2>
+        <h2 className="text-base font-bold text-paper-100">{view.title}</h2>
         <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-paper-400">
-          {ticket.profileText ?? ticket.description}
+          {view.profileText ?? view.description}
         </p>
 
         <div className="mt-5 flex items-end justify-between">
           <div>
-            <p className="text-[10px] text-paper-500">現在価格</p>
+            <p className="text-[10px] text-paper-500">{preOpen ? "開始価格" : "現在価格"}</p>
             <p className="text-3xl font-bold text-gold-400">
-              {price.toLocaleString()}
+              {(preOpen ? view.startPriceJpy : price).toLocaleString()}
               <span className="ml-1 text-sm">円</span>
             </p>
           </div>
           <div className="text-right">
-            <p className="text-[10px] text-paper-500">残り時間</p>
-            <p className={`font-mono text-xl font-bold ${remainMs < 3600000 ? "text-red-400" : "text-paper-100"}`}>
-              {isOpen ? `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}` : "終了"}
+            <p className="text-[10px] text-paper-500">{preOpen ? "開催まで" : "残り時間"}</p>
+            <p className={`font-mono text-xl font-bold ${preOpen ? "text-paper-100" : remainMs < 3600000 ? "text-red-400" : "text-paper-100"}`}>
+              {preOpen ? formatCountdown(untilOpenMs) : isOpen ? `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}` : "終了"}
             </p>
           </div>
         </div>
@@ -218,10 +294,28 @@ export default function AuctionPage() {
           </p>
         )}
 
-        {isOpen ? (
+        {preOpen ? (
+          <div className="mt-4 space-y-2">
+            {opensAtIso && (
+              <p className="rounded-card border border-gold-500/30 bg-gold-500/5 py-2.5 text-center text-xs text-gold-300">
+                次回開催: <b>{formatJstDateTime(opensAtIso)}</b> 〜(24時間)
+              </p>
+            )}
+            <button
+              disabled
+              aria-disabled="true"
+              className="w-full cursor-not-allowed rounded-full bg-ink-800 py-3.5 text-sm font-bold text-paper-500"
+            >
+              🔒 開催までお待ちください
+            </button>
+            <p className="text-center text-[10px] text-paper-500">
+              開催時間になると、このまま自動で入札できるようになります(1,000円スタート・100円刻み)
+            </p>
+          </div>
+        ) : isOpen ? (
           <button
             onClick={() => {
-              setBidAmount(String(price));
+              setBidAmount(String(minBidJpy));
               setModalOpen(true);
             }}
             className="mt-4 w-full rounded-full bg-gold-500 py-3.5 text-sm font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] transition active:translate-y-1 active:shadow-none"
@@ -242,7 +336,7 @@ export default function AuctionPage() {
           </div>
         ) : live?.isWinner && status === "paid" ? (
           <a
-            href={`/auction/reserve?ticketId=${ticket.id}`}
+            href={`/auction/reserve?ticketId=${view.id}`}
             className="mt-4 block w-full rounded-full bg-gold-500 py-3.5 text-center text-sm font-bold text-ink-950 shadow-[0_4px_0_#8a6b25] active:translate-y-1"
           >
             日程を予約する
@@ -305,15 +399,35 @@ export default function AuctionPage() {
           <div className="w-full max-w-sm rounded-card border border-ink-600 bg-ink-900 p-5">
             <h3 className="text-sm font-bold text-paper-100">入札の確認</h3>
             <p className="mt-2 text-xs text-paper-400">
-              現在価格: <b className="text-gold-400">{price.toLocaleString()}円</b>(この金額以上で入札できます)
+              現在価格: <b className="text-gold-400">{price.toLocaleString()}円</b>(入札は{minBidJpy.toLocaleString()}円から・100円刻み)
             </p>
-            <input
-              type="number"
-              value={bidAmount}
-              onChange={(e) => setBidAmount(e.target.value)}
-              min={price}
-              className="mt-3 w-full rounded-full border border-ink-600 bg-ink-950 px-4 py-3 text-center text-lg font-bold text-paper-100 outline-none focus:border-gold-500"
-            />
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setBidAmount(String(Math.max(minBidJpy, Number(bidAmount) - 100)))}
+                disabled={Number(bidAmount) <= minBidJpy}
+                className="h-12 w-12 shrink-0 rounded-full border border-ink-600 bg-ink-800 text-lg font-bold text-paper-200 disabled:opacity-30"
+                aria-label="100円下げる"
+              >
+                −
+              </button>
+              <input
+                type="text"
+                inputMode="none"
+                readOnly
+                value={`${Number(bidAmount).toLocaleString()}円`}
+                className="w-full rounded-full border border-ink-600 bg-ink-950 px-4 py-3 text-center text-lg font-bold text-paper-100 outline-none"
+                aria-label="入札金額(100円刻み)"
+              />
+              <button
+                type="button"
+                onClick={() => setBidAmount(String(Number(bidAmount) + 100))}
+                className="h-12 w-12 shrink-0 rounded-full border border-gold-500/50 bg-gold-500/15 text-lg font-bold text-gold-300"
+                aria-label="100円上げる"
+              >
+                ＋
+              </button>
+            </div>
             <label className="mt-4 flex items-start gap-2 text-[11px] leading-relaxed text-paper-300">
               <input type="checkbox" checked={agreeNoCancel} onChange={(e) => setAgreeNoCancel(e.target.checked)} className="mt-0.5" />
               落札後のキャンセル・返金ができないことを理解しました
@@ -328,7 +442,7 @@ export default function AuctionPage() {
               </button>
               <button
                 onClick={submitBid}
-                disabled={pending || !agreeNoCancel || !agreeDisclaimer || Number(bidAmount) < price}
+                disabled={pending || !agreeNoCancel || !agreeDisclaimer || Number(bidAmount) < minBidJpy || Number(bidAmount) % 100 !== 0}
                 className="flex-1 rounded-full bg-gold-500 py-3 text-xs font-bold text-ink-950 shadow-[0_3px_0_#8a6b25] active:translate-y-0.5 disabled:opacity-40"
               >
                 {pending ? "送信中..." : "この金額で入札する"}

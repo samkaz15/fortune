@@ -620,3 +620,20 @@ flowchart LR
 
 ---
 
+
+---
+
+# 変更履歴(Blueprint運用開始後)
+
+## 2026-07-08 要件対応(UI/UX・機能改善指示)
+
+### 廃止
+- **占いチャット機能(要件⑦)**: `/api/chat`とfortune-engine内チャット専用コード(generateFortune/カテゴリ別占術ルーティング)を削除。`CHARACTER_PROMPT`/`ANALYSIS_PROMPT`は全機能共通の人格・分析定義として`src/lib/fortune-engine/index.ts`に存置。`/consult`はチャットではなくLP誘導ページのため存続。
+- **お知らせ(要件①)**: `/news`ページ・Header/BottomNav/LP/sitemapの導線を削除。BottomNavとLPの同位置にトークション(→/auction)を配置。Newsモデルは未作成のまま廃止確定。
+- **未使用API**: `/api/weather`(各APIはlib/weatherを直接利用)・`/api/referral`(mypageサーバー側に同機能があり重複)。
+
+### トークション(要件②)
+- **開催前状態**: チケット未出品/scheduled時も完成版レイアウトを表示。次回開催日時(JST)・開催までのカウントダウン・ロック済み入札ボタン(「🔒開催までお待ちください」)を表示。次回ウィンドウは`nextScheduleWindows()`(月7:00/金20:00・24時間)から取得。
+- **自動切替**: `scheduled→open`のlazy遷移を`/api/auction`と`/api/auction/status`に実装(cron不要のフェイルセーフ方針は終了処理と同じ)。クライアントはカウントダウン0到達で1回だけ再取得し、リロード無しで開催中UIへ切替。未出品時は30秒毎の一覧再取得で出品を検知。
+- **入札ルール(CEO2および2026-07-05ルールを置き換え)**: 100円刻み(100の倍数)のみ有効。初回=開始価格1,000円ちょうど、以降=現在価格+100円が最低額。同額入札はルール上発生しないため旧・同額先着分岐は撤去。UIは±100円ステッパー+読み取り専用表示で不正価格の入力自体を不可能にし、サーバー側でも`BID_INVALID_STEP`/`BID_TOO_LOW`で二重検証。
+- **API変更**: `/api/auction`応答に`serverNow`・`nextWindows`・`profileText`・`topics`を追加(topics/profileTextは画面が参照していたのにselect漏れしていた潜在バグの修正を兼ねる)。`/api/auction/status`応答に`bidCount`・`opensAt`を追加。

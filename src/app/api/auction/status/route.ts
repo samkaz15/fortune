@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/auth";
-import { closeExpiredAuctions } from "@/lib/talkauction";
+import { closeExpiredAuctions, openScheduledAuctions } from "@/lib/talkauction";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +17,12 @@ export async function GET(req: NextRequest) {
   const now = new Date();
   let ticket = await prisma.auctionTicket.findUnique({ where: { id: ticketId } });
   if (!ticket) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+
+  // 開催時刻を迎えていたら開始(ポーリングだけで開催前→開催中UIが自動で切り替わる。要件②)
+  if (ticket.status === "scheduled" && now >= ticket.opensAt && now < ticket.closesAt) {
+    await openScheduledAuctions(now);
+    ticket = (await prisma.auctionTicket.findUnique({ where: { id: ticketId } }))!;
+  }
 
   if (ticket.status === "open" && now >= ticket.closesAt) {
     await closeExpiredAuctions(now);
@@ -40,10 +46,14 @@ export async function GET(req: NextRequest) {
     isTopBidder = Boolean(top && top.userId === userId);
   }
 
+  const bidCount = await prisma.bid.count({ where: { ticketId } });
+
   return NextResponse.json({
     status: ticket.status,
     currentPriceJpy: ticket.currentPriceJpy,
+    bidCount, // 最低入札額の算出用(0件なら開始価格ちょうど、以降は現在価格+100円)
     version: ticket.version,
+    opensAt: ticket.opensAt.toISOString(),
     closesAt: ticket.closesAt.toISOString(),
     serverNow: now.toISOString(), // 残り時間はサーバー時刻基準で計算(仕様書セキュリティ§2)
     myBidJpy,
