@@ -580,7 +580,7 @@ Orchestrator 層の完成度向上
 ## 参考資料
 
 - [PROJECT_CHARTER.md](./PROJECT_CHARTER.md) - プロジェクト憲章
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - システムアーキテクチャ
+- [BLUEPRINT.md](./BLUEPRINT.md) - Architecture Blueprint(SSoT)
 - [DEVELOPMENT_RULES.md](./DEVELOPMENT_RULES.md) - 開発ルール
 - [PRD.md](./PRD.md) - PRD テンプレート
 

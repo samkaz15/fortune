@@ -32,10 +32,10 @@ npm run dev
 
 | WBS | 内容 | 状態 |
 |---|---|---|
-| CL1 | IA改訂 | `docs/01_ia.md` に要約を反映済み |
-| CL2 | 画面遷移設計書改訂 | `docs/02_screen-flow.md` に要約を反映済み |
-| CL3 | データレイヤー追加設計 | `docs/03_data-layer.md`、実装は `src/lib/redis.ts`（カウンター）／`prisma/schema.prisma`（クレジット・オークション） |
-| CL4 | 要件定義 | `docs/04_requirements.md` |
+| CL1 | IA改訂 | 旧要約はArchive(現行は`docs/BLUEPRINT.md`第2部) |
+| CL2 | 画面遷移設計書改訂 | 旧要約はArchive(現行は`docs/BLUEPRINT.md`第2部) |
+| CL3 | データレイヤー追加設計 | 旧要約はArchive。実装は `src/lib/redis.ts`（カウンター）／`prisma/schema.prisma`（クレジット・オークション） |
+| CL4 | 要件定義 | 旧要約はArchive(現行仕様は`docs/design/00_ceo_decisions/`) |
 | CL5 | 画面設計（ワイヤーフレーム相当） | 実画面として `src/app/**/page.tsx` に直接実装 |
 | CL6 | API設計 | `src/app/api/**/route.ts` 一式 |
 | CL7 | DB設計 | `prisma/schema.prisma` |
