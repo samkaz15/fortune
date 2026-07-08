@@ -11,7 +11,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/", label: "ホーム", icon: "⌂" },
   { href: "/consult", label: "占い相談", icon: "💬" },
-  { href: "/news", label: "お知らせ", icon: "🔔" },
+  { href: "/auction", label: "トークション", icon: "📞" },
   { href: "/mypage", label: "マイページ", icon: "👤" },
 ];
 

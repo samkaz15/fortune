@@ -21,7 +21,6 @@ const MENU: { href: string; label: string; note?: string }[] = [
   { href: "/calendar", label: "風水カレンダー", note: "あなたの開運日と注意日" },
   { href: "/auction", label: "トークション", note: "電話占いオークション" },
   { href: "/shrines", label: "縁のある神社", note: "今日の運気に合う参拝先" },
-  { href: "/news", label: "お知らせ" },
   { href: "/plans", label: "プラン・お支払い" },
   { href: "/mypage", label: "マイページ" },
   { href: "/mypage/notifications", label: "通知設定" },
