@@ -37,7 +37,7 @@ export default async function OGImage({ params }: { params: { id: string } }) {
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", fontSize: 28, color: "#D9A62E", letterSpacing: 8, marginBottom: 16 }}>ITOMACHI NO SHONEN</div>
+        <div style={{ display: "flex", fontSize: 28, color: "#D9A62E", letterSpacing: 8, marginBottom: 16 }}>錦糸町の少年</div>
         {score !== null ? (
           <div
             style={{

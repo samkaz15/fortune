@@ -39,12 +39,18 @@ export default async function TopPage() {
   return (
     <div className="flex flex-col gap-8 px-5">
       <section className="flex flex-col items-center gap-4 pt-4 text-center">
+        {/* 天の川×都市の背景(2026-07-11: 七夕世界観の強化。ユーザー提供のイメージを採用) */}
+        <div className="relative w-full overflow-hidden rounded-card border border-ink-700 shadow-lantern">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/character/milkyway_city.jpg" alt="天の川と錦糸町の夜景" className="h-40 w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink-950/70 via-transparent to-transparent" />
+        </div>
         {/* OSのライト/ダーク設定で画像を切替(CEO指定 2026-07-06: ライト=朝/ダーク=夜) */}
         <picture className="block w-full overflow-hidden rounded-card border border-ink-700 shadow-lantern">
           <source srcSet="/character/home_light.jpg" media="(prefers-color-scheme: light)" />
           <img src="/character/home_dark.jpg" alt="錦糸町の少年" className="h-40 w-full object-cover" />
         </picture>
-        <p className="font-display text-sm tracking-[0.3em] text-gold-500">ITOMACHI NO SHONEN</p>
+        <p className="font-display text-sm tracking-[0.3em] text-gold-500">錦糸町の少年</p>
         <h1 className="font-display text-3xl leading-snug text-paper-50">
           <HomeGreeting />
         </h1>
