@@ -189,7 +189,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS daily_reports_user_period_key ON daily_reports
 
 # 5. BLUEPRINT更新内容(実装完了時に`docs/BLUEPRINT.md`末尾へ追記する文面)
 
-- 今日の運勢: 日付キーをJST基準(`lib/jst.ts`)へ修正。`daily_reports`に`period`列を追加しユニークを(userId, reportDate, period)へ変更(манual_report_period.sql)。
+- 今日の運勢: 日付キーをJST基準(`lib/jst.ts`)へ修正。`daily_reports`に`period`列を追加しユニークを(userId, reportDate, period)へ変更(manual_report_period.sql)。
 - トークション: 開催を**毎週土曜・日曜 9:00 JST開始/各24時間**へ変更(旧: 月7:00/金20:00)。開催前は**事前入札(指値)期間**とし、入札ルールは開催中と同一、現在価格・入札数・最高入札額を開催前から表示。
 - 認証UX: ログイン/登録成功時にToast表示(`itomachi_toast`)。Headerにログイン状態(アバター)表示。
 - フォント: メトリクス調整済みローカルフォールバック(@font-face size-adjust)でロード時のレイアウト拡大を解消。
