@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/db";
+import { SITE_NAME_EN } from "@/lib/site";
 
 /**
  * GET /result/[id]/opengraph-image
@@ -37,7 +38,7 @@ export default async function OGImage({ params }: { params: { id: string } }) {
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", fontSize: 28, color: "#D9A62E", letterSpacing: 8, marginBottom: 16 }}>錦糸町の少年</div>
+        <div style={{ display: "flex", fontSize: 28, color: "#D9A62E", letterSpacing: 8, marginBottom: 16 }}>{SITE_NAME_EN}</div>
         {score !== null ? (
           <div
             style={{

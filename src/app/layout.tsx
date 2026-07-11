@@ -13,12 +13,13 @@ import { MilkyWayBackground } from "@/components/MilkyWayBackground";
  */
 
 const APP_URL = process.env.APP_URL ?? "http://localhost:3000";
-import { SITE_NAME, SITE_TAGLINE } from "@/lib/site";
+import { SITE_NAME, SITE_NAME_EN, SITE_TAGLINE } from "@/lib/site";
 const SITE_DESCRIPTION =
   "AIがあなたの生年月日・名前から今日の運気とネクストアクションを届ける占いサービス。四柱推命・算命学・姓名判断をもとに、恋愛・仕事・today's fortuneを毎日診断。";
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
+  applicationName: SITE_NAME_EN,
   title: { default: `${SITE_NAME} | ${SITE_TAGLINE}`, template: `%s | ${SITE_NAME}` },
   description: SITE_DESCRIPTION,
   alternates: { canonical: "/" },
@@ -86,8 +87,8 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@graph": [
-                { "@type": "WebSite", name: "錦糸町の少年", url: "https://fortune-itomachi.vercel.app", inLanguage: "ja" },
-                { "@type": "Organization", name: "株式会社Viwe Point", url: "https://fortune-itomachi.vercel.app/legal/company" },
+                { "@type": "WebSite", name: SITE_NAME, alternateName: SITE_NAME_EN, url: APP_URL, inLanguage: "ja" },
+                { "@type": "Organization", name: "株式会社Viwe Point", url: `${APP_URL}/legal/company` },
               ],
             }),
           }}

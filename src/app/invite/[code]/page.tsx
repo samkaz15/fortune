@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { SITE_NAME_EN } from "@/lib/site";
 
 /**
  * 招待着地ページ(紹介制度 2026-07-07 復活・Marketing-011,012,013)。
@@ -15,7 +16,7 @@ export default async function InvitePage({ params }: { params: { code: string } 
 
   return (
     <div className="flex flex-col items-center gap-6 px-5 pt-16 text-center">
-      <p className="font-display text-sm tracking-[0.3em] text-gold-500">錦糸町の少年</p>
+      <p className="font-display text-sm tracking-[0.3em] text-gold-500">{SITE_NAME_EN}</p>
       <h1 className="font-display text-xl leading-relaxed text-paper-50">
         {inviterName}さんから
         <br />
