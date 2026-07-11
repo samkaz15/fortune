@@ -6,6 +6,7 @@ import { requireUserId, AuthRequiredError } from "@/lib/auth";
 import { generateDailyReport } from "@/lib/decision-report";
 import { getWeatherContext } from "@/lib/weather";
 import { calculateStreak } from "@/lib/streak";
+import { jstToday } from "@/lib/jst";
 
 /**
  * GET /api/report/today
@@ -63,22 +64,25 @@ async function handleReport(req: NextRequest, userId: string) {
     return NextResponse.json({ error: "PROFILE_REQUIRED" }, { status: 409 });
   }
 
-  const today = new Date();
+  // JST基準の「今日」を起点にする(2026-07-11 Phase1指示A・要件②原因A対策)。
+  // 旧: new Date()のUTC日付をそのまま使っていたため、JST 0:00〜8:59は前日のレポートが
+  //     返り続けるバグがあった。jstToday()はJST日付をUTC0時のDateとして正規化して返す。
+  const today = jstToday();
   // 期間タブ(UI仕様v5): today/week/month/nextMonth。同ロジック・同スキーマで、
   // 期間の代表日(週=週初の月曜/月=1日/来月=翌月1日)をシードにして生成・保存する。
   const period = req.nextUrl.searchParams.get("period") ?? "today";
-  let reportDate = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+  let reportDate = today; // todayは既にUTC0時に正規化済みのDate(jstToday()の戻り値)
   if (period === "week") {
     const dow = (reportDate.getUTCDay() + 6) % 7; // 月曜=0
     reportDate = new Date(reportDate.getTime() - dow * 86_400_000);
   } else if (period === "month") {
-    reportDate = new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1));
+    reportDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
   } else if (period === "nextMonth") {
-    reportDate = new Date(Date.UTC(today.getFullYear(), today.getMonth() + 1, 1));
+    reportDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 1));
   }
 
   const existing = await prisma.dailyReport.findUnique({
-    where: { userId_reportDate: { userId, reportDate } },
+    where: { userId_reportDate_period: { userId, reportDate, period } },
   });
   if (existing) {
     return NextResponse.json({ ...toResponse(existing), streak: (await calculateStreak(userId)).currentStreak, remainingFreeQuota: await getRemainingDailyFreeQuota(userId), isSubscribed: await hasActiveSub(userId) });
@@ -106,6 +110,7 @@ async function handleReport(req: NextRequest, userId: string) {
       data: {
         userId,
         reportDate,
+        period,
         score: result.score,
         stars: result.stars,
         keywords: result.keywords,
@@ -122,7 +127,7 @@ async function handleReport(req: NextRequest, userId: string) {
     return NextResponse.json({ ...toResponse(saved), streak: (await calculateStreak(userId)).currentStreak, remainingFreeQuota: await getRemainingDailyFreeQuota(userId), isSubscribed: await hasActiveSub(userId) });
   } catch {
     const raced = await prisma.dailyReport.findUnique({
-      where: { userId_reportDate: { userId, reportDate } },
+      where: { userId_reportDate_period: { userId, reportDate, period } },
     });
     if (raced) return NextResponse.json({ ...toResponse(raced), streak: (await calculateStreak(userId)).currentStreak, remainingFreeQuota: await getRemainingDailyFreeQuota(userId), isSubscribed: await hasActiveSub(userId) });
     throw new Error("DailyReport save failed");

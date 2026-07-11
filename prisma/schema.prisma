@@ -348,6 +348,7 @@ model DailyReport {
   id             String   @id @default(uuid())
   userId         String
   reportDate     DateTime @db.Date
+  period         String   @default("today") // today|week|month|nextMonth(2026-07-11 Phase1指示A・要件②原因B対策)
   score          Int
   stars          Int
   keywords       Json // {userTheme, environment, fortune}
@@ -360,7 +361,7 @@ model DailyReport {
   generatedBy    String   @default("llm") // llm | fallback
   createdAt      DateTime @default(now())
 
-  @@unique([userId, reportDate])
+  @@unique([userId, reportDate, period])
   @@map("daily_reports")
 }
 

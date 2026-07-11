@@ -657,3 +657,11 @@ flowchart LR
 - `public/report-ui/index.html`(旧v4 LP・手動同期運用)と入口`/consult`を削除。LP内ハンバーガーの「相談チャット(デモ)」もLPごと消滅。
 - 接続の張り替え: BottomNav/Headerの「占い相談」項目は削除。ホームの「錦糸町の少年に相談する」→トークション(`/auction`)。人気ランキングと結果画面の推薦リンクは`categoryPage()`(recommendation.tsに一元化: SELF→/self, COMPATIBILITY→/love, BUSINESS→/work)で対応する無料診断ページへ。恋愛/仕事結果のFloatingCTAは要件⑥と同方針で`/auth/signup?from=`へ。
 - middlewareのreport-ui除外設定も撤去。
+
+## 2026-07-11 Phase1実装(SONNET5_SPEC.md指示A/B/C — バグ修正)
+
+設計書: `docs/handoff/SONNET5_SPEC.md`
+
+- **要件②(今日の運勢が更新されない)**: 原因はUTC日付境界(JST 0-9時に前日が返る)とdaily_reportsのユニークキー衝突(today/week/monthが同一reportDateを共有)の2点。`src/lib/jst.ts`(jstToday)新設+全期間算出をJST基準へ。`daily_reports`に`period`列追加、ユニークを`(userId, reportDate, period)`へ変更(`prisma/manual_report_period.sql` — **本番適用必須**)。結果画面に対象日時ラベルを追加。
+- **要件⑧(UI一瞬拡大)**: Google Fonts切替時のメトリクス差によるCLSと特定。`globals.css`にsize-adjust付きローカルフォールバック(@font-face)を追加、layoutにfonts.googleapis.com/gstatic.comのpreconnectを追加。ビルド時外部フェッチ無し(@import はブラウザ実行時のみ)を維持しオフラインビルド安全性を確認。
+- **要件⑨(生年月日UI崩れ)**: ネイティブ`<input type="date">`を廃止し、年/月/日3セレクトの共通コンポーネント`src/components/BirthDateSelect.tsx`へ統一(self/work/report/signupの4画面)。うるう年の日数も動的算出。

@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { track } from "@/lib/track-client";
 import { loadFortuneInput } from "@/lib/fortune-input";
+import { BirthDateSelect } from "@/components/BirthDateSelect";
 
 export default function SignupPage() {
   return (
@@ -96,13 +97,7 @@ function SignupForm() {
           </Field>
         </div>
         <Field label="生年月日">
-          <input
-            type="date"
-            required
-            value={form.birthDate}
-            onChange={(e) => update("birthDate", e.target.value)}
-            className="input"
-          />
+          <BirthDateSelect value={form.birthDate} onChange={(v) => update("birthDate", v)} />
         </Field>
         <Field label="出生時間(わかれば)">
           <input type="time" value={form.birthTime} onChange={(e) => update("birthTime", e.target.value)} className="input" />

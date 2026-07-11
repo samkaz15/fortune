@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ScoreOrb } from "@/components/ScoreOrb";
 import { GlassMosaic, ScrollProgress, ShareRow, AffSlot, DramaticLoading, PrimaryButton } from "@/components/ui-common";
 import { saveFortuneInput, loadFortuneInput } from "@/lib/fortune-input";
+import { BirthDateSelect } from "@/components/BirthDateSelect";
 
 interface DetailItem {
   text: string;
@@ -37,6 +38,15 @@ interface Report {
  * 「今日の意思決定レポート」画面(CEO_UPDATE 2026-07-03の6項目フォーマット)。
  * ①スコア(★+100点) ②キーワード3つ ③総合要約 ④注意3項目 ⑤総合アドバイス ⑥今日やるべき1つの行動
  */
+/** reportDate("YYYY-MM-DD")を「◯月◯日の運勢」表記に(要件②: 更新不安の解消) */
+function formatReportDateLabel(reportDate: string, period: "today" | "week" | "month" | "nextMonth"): string {
+  const [, m, d] = reportDate.split("-").map(Number);
+  const dateLabel = `${m}月${d}日`;
+  if (period === "today") return `${dateLabel}の運勢`;
+  if (period === "week") return `${dateLabel}の週の運勢`;
+  return `${dateLabel}〜の運勢`;
+}
+
 export default function ReportPageClient() {
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<{ message: string; href: string; label: string } | null>(null);
@@ -183,12 +193,7 @@ export default function ReportPageClient() {
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-bold text-paper-300">生年月日</span>
-          <input
-            type="date"
-            value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
-            className="rounded-full border border-ink-600 bg-ink-950 px-5 py-3 text-sm text-paper-100 outline-none focus:border-gold-500"
-          />
+          <BirthDateSelect value={birthDate} onChange={setBirthDate} />
         </label>
         <button
           onClick={() => {
@@ -247,6 +252,8 @@ export default function ReportPageClient() {
 
       {/* ① 運勢スコア */}
       <section className="flex flex-col items-center gap-2">
+        {/* 2026-07-11 Phase1指示A: 「更新されていない」不安の解消のため対象日を明示 */}
+        <p className="text-[11px] text-paper-500">{formatReportDateLabel(report.reportDate, period)}</p>
         <ScoreOrb score={report.score} size={130} />
         <p className="text-lg tracking-widest text-gold-400" aria-label={`5段階中${report.stars}`}>
           {"★".repeat(report.stars)}

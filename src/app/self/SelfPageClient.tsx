@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { saveFortuneInput, loadFortuneInput } from "@/lib/fortune-input";
 import { GlassMosaic, ScrollProgress, ShareRow, FloatingCTA, AffSlot, DramaticLoading, withMinimumDuration, PrimaryButton } from "@/components/ui-common";
 import { track } from "@/lib/track-client";
+import { BirthDateSelect } from "@/components/BirthDateSelect";
 
 interface Sections {
   essence: { personality: string; talent: string; strength: string; weakness: string; thinking: string };
@@ -117,7 +118,7 @@ export default function SelfPageClient() {
             <label className="mb-1 block text-[11px] font-bold text-paper-100">名前<span className="ml-1 font-normal text-paper-500">ニックネームでOK</span></label>
             <input value={name} onChange={(e) => setName(e.target.value)} className="mb-4 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 py-3 text-sm text-paper-100 outline-none focus:border-gold-500" placeholder="糸子" />
             <label className="mb-1 block text-[11px] font-bold text-paper-100">生年月日</label>
-            <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className="mb-4 block h-12 w-full min-w-0 appearance-none rounded-xl border border-ink-700 bg-ink-950 px-4 text-sm leading-none text-paper-100 outline-none focus:border-gold-500" style={{ colorScheme: "dark", WebkitAppearance: "none" }} />
+            <BirthDateSelect value={birthDate} onChange={setBirthDate} className="mb-4" />
             <PrimaryButton onClick={run} disabled={!name || !birthDate || submitting}>診断をはじめる</PrimaryButton>
           </div>
 

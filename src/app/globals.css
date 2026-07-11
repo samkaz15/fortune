@@ -4,10 +4,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * メトリクス調整済みローカルフォールバック(2026-07-11 Phase1指示B・要件⑧対策)。
+ * 背景: Google Fontsのdisplay=swapにより、初回はOS標準フォント(Hiragino Mincho等)で
+ * 描画され、Webフォント到着時に字幅・行高が変わってレイアウト全体が「一瞬拡大」して
+ * 見えるCLSが発生していた。size-adjust/ascent-override等でローカルフォントの
+ * メトリクスをWebフォントに近づけ、切替時の見た目の変化を抑える。
+ * 数値は初期値。実機目視で気になる場合は±4%以内で微調整可(SONNET5_SPEC.md指示B-4参照)。
+ */
+@font-face {
+  font-family: "Shippori Fallback";
+  src: local("Hiragino Mincho ProN"), local("Yu Mincho");
+  size-adjust: 106%;
+  ascent-override: 88%;
+  descent-override: 24%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Zen Kaku Fallback";
+  src: local("Hiragino Kaku Gothic ProN"), local("Yu Gothic");
+  size-adjust: 102%;
+}
+
 :root {
   color-scheme: dark;
-  --font-shippori: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
-  --font-zenkaku: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  --font-shippori: "Shippori Mincho", "Shippori Fallback", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-zenkaku: "Zen Kaku Gothic New", "Zen Kaku Fallback", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
   --font-mono: ui-monospace, monospace;
 }
 

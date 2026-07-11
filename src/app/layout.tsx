@@ -79,6 +79,9 @@ export default function RootLayout({
             }),
           }}
         />
+        {/* Webフォントの到着を早め、フォールバック→本フォント切替のCLS体感時間を短縮(Phase1指示B) */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* 全画面共通の固定背景画像(2026-07-11)。最重要visual assetのためプリロードでLCP劣化を防ぐ */}
         <link rel="preload" as="image" href="/character/milkyway_city.jpg" fetchPriority="high" />
         <MilkyWayBackground />
