@@ -39,55 +39,36 @@ export default async function TopPage() {
   const score = await todayScore();
   return (
     <div className="flex flex-col gap-8 px-5">
-      <section className="relative -mx-5 overflow-hidden">
-        {/* Hero全体の背景画像(2026-07-11修正: 「追加」ではなくHero全体を覆う背景として実装。
-            absolute inset-0 + object-cover により、親sectionの実高さ(コンテンツに応じて可変)を
-            常に隙間なく覆う。幅は親(max-w-mdの画面フレーム)いっぱいに広がる。 */}
-        <div className="absolute inset-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/character/milkyway_city.jpg"
-            alt="天の川と都市の夜景"
-            className="h-full w-full object-cover"
-          />
-          {/* 可読性確保のためのオーバーレイ(黒系グラデーション・上下2枚がけ) */}
-          <div className="absolute inset-0 bg-gradient-to-b from-ink-950/35 via-ink-950/55 to-ink-950" />
-          <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-ink-950/40" />
-        </div>
+      <section className="flex flex-col items-center gap-4 pt-4 text-center">
+        {/* OSのライト/ダーク設定で画像を切替(CEO指定 2026-07-06: ライト=朝/ダーク=夜)。
+            2026-07-11: 丸型アバターへの変更は取り消し、元の横長レイアウトへ復元。
+            背景の天の川×都市画像はHero専用ではなく全画面共通(MilkyWayBackground)へ移設済み。 */}
+        <picture className="block w-full overflow-hidden rounded-card border border-ink-700 shadow-lantern">
+          <source srcSet="/character/home_light.jpg" media="(prefers-color-scheme: light)" />
+          <img src="/character/home_dark.jpg" alt="錦糸町の少年" className="h-40 w-full object-cover" />
+        </picture>
+        <p className="font-display text-sm tracking-[0.3em] text-gold-500">{SITE_NAME_EN}</p>
+        <h1 className="font-display text-3xl leading-snug text-paper-50">
+          <HomeGreeting />
+        </h1>
+        <p className="max-w-[26ch] text-sm leading-relaxed text-paper-400">
+          生年月日と名前、そして毎日の対話から。今日どう動けばいいかを、迷わず決められるレポートを届けます。
+        </p>
+      </section>
 
-        {/* レイヤー: キャラクター・タイトル・CTAを画像の上に表示 */}
-        <div className="relative z-10 flex flex-col items-center gap-4 px-5 pb-8 pt-10 text-center">
-          {/* OSのライト/ダーク設定で画像を切替(CEO指定 2026-07-06: ライト=朝/ダーク=夜) */}
-          <picture className="block h-24 w-24 overflow-hidden rounded-full border-2 border-gold-400 shadow-lantern">
-            <source srcSet="/character/home_light.jpg" media="(prefers-color-scheme: light)" />
-            <img src="/character/home_dark.jpg" alt="錦糸町の少年" className="h-full w-full object-cover" />
-          </picture>
-          <p className="font-display text-sm tracking-[0.3em] text-gold-400 [text-shadow:0_1px_6px_rgba(0,0,0,0.6)]">
-            {SITE_NAME_EN}
-          </p>
-          <h1 className="font-display text-3xl leading-snug text-paper-50 [text-shadow:0_2px_10px_rgba(0,0,0,0.55)]">
-            <HomeGreeting />
-          </h1>
-          <p className="max-w-[26ch] text-sm leading-relaxed text-paper-100 [text-shadow:0_1px_6px_rgba(0,0,0,0.6)]">
-            生年月日と名前、そして毎日の対話から。今日どう動けばいいかを、迷わず決められるレポートを届けます。
-          </p>
-
-          {/* CTA(スコア+今日のひとこと+主導線ボタン)もHero内のレイヤーとして表示 */}
-          <div className="mt-2 flex w-full flex-col items-center gap-4 rounded-card border border-white/10 bg-ink-950/45 px-6 py-6 backdrop-blur-sm">
-            <ScoreOrb score={score} size={140} />
-            <p className="text-center text-sm text-paper-100">
-              今日は「流れに乗る」日。
-              <br />
-              焦らなくても大丈夫。
-            </p>
-            <Link
-              href="/report"
-              className="w-full rounded-full bg-gold-500 py-3 text-center font-bold text-ink-950 transition active:scale-[0.98]"
-            >
-              今日の自分の運勢レポートを見る
-            </Link>
-          </div>
-        </div>
+      <section className="flex flex-col items-center gap-4 rounded-card border border-ink-700 bg-ink-900/60 px-6 py-8 shadow-lantern">
+        <ScoreOrb score={score} size={140} />
+        <p className="text-center text-sm text-paper-200">
+          今日は「流れに乗る」日。
+          <br />
+          焦らなくても大丈夫。
+        </p>
+        <Link
+          href="/report"
+          className="w-full rounded-full bg-gold-500 py-3 text-center font-bold text-ink-950 transition active:scale-[0.98]"
+        >
+          今日の自分の運勢レポートを見る
+        </Link>
       </section>
 
       <section className="flex flex-col gap-3">

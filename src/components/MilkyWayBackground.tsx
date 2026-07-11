@@ -39,9 +39,38 @@ export function MilkyWayBackground() {
 
   return (
     <>
+      {/* アプリ全体の固定背景(2026-07-11修正: Heroだけでなく全画面共通・スクロールで動かない)。
+          Apple/Spotify的な「背景固定・コンテンツだけスクロール」構成の基盤レイヤー。 */}
+      <div className="mw-photo" />
+      <div className="mw-photo-overlay" />
       <div className="mw-sky" />
       <div className="mw-band" />
       <style jsx global>{`
+        .mw-photo {
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          z-index: -2;
+          background-image: url("/character/milkyway_city.jpg");
+          background-size: cover;
+          background-position: center 28%;
+          background-repeat: no-repeat;
+        }
+        .mw-photo-overlay {
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          z-index: -1;
+          /* 上部(星空)は活かし、コンテンツが乗る中央〜下部にかけて暗く落として可読性を確保 */
+          background: linear-gradient(
+              to bottom,
+              rgba(16, 16, 38, 0.25) 0%,
+              rgba(16, 16, 38, 0.55) 38%,
+              rgba(16, 16, 38, 0.88) 75%,
+              rgba(16, 16, 38, 0.97) 100%
+            ),
+            radial-gradient(120% 70% at 50% 100%, rgba(16, 16, 38, 0.5) 0%, rgba(16, 16, 38, 0) 60%);
+        }
         .mw-sky {
           position: fixed;
           inset: 0;

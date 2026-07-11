@@ -79,6 +79,8 @@ export default function RootLayout({
             }),
           }}
         />
+        {/* 全画面共通の固定背景画像(2026-07-11)。最重要visual assetのためプリロードでLCP劣化を防ぐ */}
+        <link rel="preload" as="image" href="/character/milkyway_city.jpg" fetchPriority="high" />
         <MilkyWayBackground />
         <script
           type="application/ld+json"
