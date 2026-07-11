@@ -9,7 +9,7 @@ import { track } from "@/lib/track-client";
 export function ShareButtons({ resultId }: { resultId: string }) {
   async function handleShare() {
     const url = `${window.location.origin}/result/${resultId}`;
-    const text = "今日の運勢を占ってもらった。#糸町の少年";
+    const text = "今日の運勢を占ってもらった。#錦糸町の少年";
     track("share", { platform: "native_or_copy", resultId }); // 計測基盤(2026-07-07・Marketing-083)
 
     if (navigator.share) {

@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     name,
     tier,
+    grounding: reading.grounding, // 占術根拠は全段階に開放(信頼性訴求のため非登録者にも見せる)
     sections,
     memberLocked: tier === "guest", // 05〜10が未開放(登録で解放)
     wave: reading.wave,

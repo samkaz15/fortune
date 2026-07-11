@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: "四柱推命×暦注(六曜等)で、あなた専用の開運日・注意日をカレンダー表示。",
   alternates: { canonical: "/calendar" },
   openGraph: {
-    title: "風水カレンダー | 糸町の少年",
+    title: "風水カレンダー | 錦糸町の少年",
     description: "あなたの開運日・注意日をチェック。",
     url: "/calendar",
   },

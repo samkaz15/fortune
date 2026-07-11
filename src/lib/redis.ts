@@ -134,7 +134,7 @@ export async function getRemainingDailyFreeQuota(
 
 /**
  * 無料枠の払い戻し(CEO_QUOTA_definition 2026-07-05)。
- * 「1日5回」は"糸町の少年からの返信が届いた回数"と定義されたため、
+ * 「1日5回」は"錦糸町の少年からの返信が届いた回数"と定義されたため、
  * 消費後に生成が失敗して返信を届けられなかった場合はカウンターを1戻す。
  */
 export async function refundDailyFreeQuota(userId: string): Promise<void> {

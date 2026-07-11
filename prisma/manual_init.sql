@@ -1,5 +1,5 @@
 -- ============================================================
--- 糸町の少年 初期スキーマ (prisma/schema.prisma から手動生成)
+-- 錦糸町の少年 初期スキーマ (prisma/schema.prisma から手動生成)
 -- 生成理由: サンドボックス環境では prisma migrate に必要な
 -- schema-engine バイナリが取得できないため。
 -- 本番環境では `npx prisma migrate dev` を正とすること。

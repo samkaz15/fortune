@@ -11,6 +11,7 @@ interface DetailItem {
   reason: string;
 }
 interface ReportDetails {
+  grounding?: string[]; // 占術根拠(旧キャッシュ行には無い)
   events: DetailItem[];
   cautionPoints: DetailItem[];
   recommendations: DetailItem[];
@@ -26,6 +27,7 @@ interface Report {
   cautions: string[];
   advice: string;
   todayAction: string;
+  streak?: number; // 連続チェック日数(マーケ02章: リテンション可視化)
   details?: ReportDetails | null; // 要件⑤ 2026-07-08の拡充ブロック(旧キャッシュ行はnull)
   remainingFreeQuota?: number;
   isSubscribed?: boolean;
@@ -148,7 +150,7 @@ export default function ReportPageClient() {
     return (
       <div className="flex flex-col gap-5 px-5 pt-4 pb-8">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/character/report_hero.jpg" alt="糸町の少年" className="mb-1 h-36 w-full rounded-card border border-ink-700 object-cover shadow-lantern" style={{ objectPosition: "center 30%" }} />
+        <img src="/character/report_hero.jpg" alt="錦糸町の少年" className="mb-1 h-36 w-full rounded-card border border-ink-700 object-cover shadow-lantern" style={{ objectPosition: "center 30%" }} />
         <h1 className="font-display text-lg text-paper-50">今日の運勢</h1>
         <p className="text-center text-xs leading-relaxed text-paper-300">
           ログインすると、毎日ワンタップで今日の運勢が見られます。<br />初回に名前と生年月日を登録するだけで、次からは入力不要です。
@@ -165,7 +167,7 @@ export default function ReportPageClient() {
     return (
       <div className="flex flex-col gap-5 px-5 pt-4 pb-8">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/character/report_hero.jpg" alt="糸町の少年" className="mb-1 h-36 w-full rounded-card border border-ink-700 object-cover shadow-lantern" style={{ objectPosition: "center 30%" }} />
+        <img src="/character/report_hero.jpg" alt="錦糸町の少年" className="mb-1 h-36 w-full rounded-card border border-ink-700 object-cover shadow-lantern" style={{ objectPosition: "center 30%" }} />
         <h1 className="font-display text-lg text-paper-50">今日の運勢</h1>
         <p className="text-center text-[11px] text-paper-500">初回のみ、お名前と生年月日をご登録ください。次回からは入力不要で、押した瞬間に結果が出ます</p>
         <label className="flex flex-col gap-1.5">
@@ -206,7 +208,7 @@ export default function ReportPageClient() {
   }
 
   if (loading) {
-    return <DramaticLoading messages={["糸をたどっています、、", "今日の流れと重ねています（65%）", "見えました。"]} />;
+    return <DramaticLoading messages={["天の川に、糸を渡しています、、", "今日のあなたの星と重ねています（65%）", "見えました。"]} />;
   }
 
   if (error) {
@@ -227,7 +229,7 @@ export default function ReportPageClient() {
       <ScrollProgress />
       {/* 今日の運勢ヒーロー(CEO指定画像 2026-07-07) */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/character/report_hero.jpg" alt="糸町の少年" className="mb-3 h-36 w-full rounded-card border border-ink-700 object-cover shadow-lantern" style={{ objectPosition: "center 30%" }} />
+      <img src="/character/report_hero.jpg" alt="錦糸町の少年" className="mb-3 h-36 w-full rounded-card border border-ink-700 object-cover shadow-lantern" style={{ objectPosition: "center 30%" }} />
       <h1 className="font-display text-lg text-paper-50">今日の運勢</h1>
       <p className="mt-1 text-center text-[11px] text-paper-500">今日の運勢を占って自分を確認</p>
       {/* 期間タブ(UI仕様v5): 同UI・同ロジック。有料会員のみ全文、無料部分以降はモザイク */}
@@ -264,6 +266,21 @@ export default function ReportPageClient() {
         <h2 className="mb-2 text-xs font-bold text-gold-400">今日の行動方針</h2>
         <p className="text-sm leading-relaxed text-paper-100">{report.summary}</p>
       </section>
+
+      {/* 今日の星回り: 占術根拠の明示(要件6 2026-07-11。マーケ01章の信頼性懸念対策) */}
+      {report.details?.grounding && report.details.grounding.length > 0 && (
+        <section className="rounded-card border border-ink-700 bg-ink-900/50 p-5">
+          <h2 className="mb-3 text-xs font-bold text-gold-400">🌌 今日の星回り(占いの根拠)</h2>
+          <ul className="space-y-2.5">
+            {report.details.grounding.map((g, i) => (
+              <li key={i} className="flex gap-2 text-xs leading-relaxed text-paper-300">
+                <span className="text-gold-500">✦</span>
+                <span>{g}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* ④ 今日起こりやすい出来事(要件⑤ 2026-07-08: 理由付き3項目) */}
       {report.details && (
@@ -325,7 +342,7 @@ export default function ReportPageClient() {
       {report.isSubscribed ? (
         <>
           <section className="rounded-card border border-ink-700 bg-ink-900/50 p-5">
-            <h2 className="mb-2 text-xs font-bold text-paper-400">糸町の少年からのアドバイス</h2>
+            <h2 className="mb-2 text-xs font-bold text-paper-400">錦糸町の少年からのアドバイス</h2>
             <p className="text-sm leading-relaxed text-paper-100">{report.advice}</p>
           </section>
           <section className="rounded-card border-2 border-gold-500 bg-ink-900/70 p-5 text-center">
@@ -353,7 +370,11 @@ export default function ReportPageClient() {
         </section>
       )}
 
-      <ShareRow text={`今日の運勢は${report.score}点。「${report.keywords.userTheme}」の日 — 糸町の少年`} />
+      {typeof report.streak === "number" && report.streak >= 2 && (
+        <p className="text-center text-xs text-gold-300">🎋 {report.streak}日連続でチェック中。この糸、切らさずにいきましょう</p>
+      )}
+
+      <ShareRow text={`【今日の短冊】運勢${report.score}点。「${report.keywords.userTheme}」の日。 #錦糸町の少年 #今日の運勢`} />
 
       {/* CV1: ここから先の核心(モザイク寸止め) + CV3: 感情CTA */}
       <section className="relative overflow-hidden rounded-card border border-gold-500/40" style={{ minHeight: 210 }}>

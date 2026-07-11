@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: "生年月日から、あなたの働き方の本質・向いている業界と部署をAIが診断。算命学の考え方をベースにした無料のキャリア診断です。",
   alternates: { canonical: "/work" },
   openGraph: {
-    title: "仕事・キャリア診断 | 糸町の少年",
+    title: "仕事・キャリア診断 | 錦糸町の少年",
     description: "生年月日から、あなたの適職を無料診断。",
     url: "/work",
   },

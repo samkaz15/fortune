@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireUserId, AuthRequiredError } from "@/lib/auth";
 import { generateDailyReport } from "@/lib/decision-report";
 import { getWeatherContext } from "@/lib/weather";
+import { calculateStreak } from "@/lib/streak";
 
 /**
  * GET /api/report/today
@@ -80,7 +81,7 @@ async function handleReport(req: NextRequest, userId: string) {
     where: { userId_reportDate: { userId, reportDate } },
   });
   if (existing) {
-    return NextResponse.json({ ...toResponse(existing), remainingFreeQuota: await getRemainingDailyFreeQuota(userId), isSubscribed: await hasActiveSub(userId) });
+    return NextResponse.json({ ...toResponse(existing), streak: (await calculateStreak(userId)).currentStreak, remainingFreeQuota: await getRemainingDailyFreeQuota(userId), isSubscribed: await hasActiveSub(userId) });
   }
 
   const lat = Number(req.nextUrl.searchParams.get("lat"));
@@ -118,12 +119,12 @@ async function handleReport(req: NextRequest, userId: string) {
       },
     });
   trackEvent("report_generated", {}, userId);
-    return NextResponse.json({ ...toResponse(saved), remainingFreeQuota: await getRemainingDailyFreeQuota(userId), isSubscribed: await hasActiveSub(userId) });
+    return NextResponse.json({ ...toResponse(saved), streak: (await calculateStreak(userId)).currentStreak, remainingFreeQuota: await getRemainingDailyFreeQuota(userId), isSubscribed: await hasActiveSub(userId) });
   } catch {
     const raced = await prisma.dailyReport.findUnique({
       where: { userId_reportDate: { userId, reportDate } },
     });
-    if (raced) return NextResponse.json({ ...toResponse(raced), remainingFreeQuota: await getRemainingDailyFreeQuota(userId), isSubscribed: await hasActiveSub(userId) });
+    if (raced) return NextResponse.json({ ...toResponse(raced), streak: (await calculateStreak(userId)).currentStreak, remainingFreeQuota: await getRemainingDailyFreeQuota(userId), isSubscribed: await hasActiveSub(userId) });
     throw new Error("DailyReport save failed");
   }
 }

@@ -9,7 +9,7 @@ import { prisma } from "@/lib/db";
  * 該当ページのOGPメタタグに自動で接続される。
  */
 export const runtime = "nodejs";
-export const alt = "糸町の少年 診断結果";
+export const alt = "錦糸町の少年 診断結果";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -67,7 +67,7 @@ export default async function OGImage({ params }: { params: { id: string } }) {
         >
           {headline}
         </div>
-        <div style={{ display: "flex", marginTop: 32, fontSize: 22, color: "#847C9C" }}>糸町の少年 — AI占い</div>
+        <div style={{ display: "flex", marginTop: 32, fontSize: 22, color: "#847C9C" }}>錦糸町の少年 — AI占い</div>
       </div>
     ),
     { ...size }

@@ -222,10 +222,10 @@ export default function AuctionPage() {
   // 次回開催ウィンドウを使ったプレースホルダーで描画し、開始と同時に実チケットへ切り替わる。
   const view: Ticket = ticket ?? {
     id: "",
-    title: "糸町の少年と話せる1時間",
+    title: "錦糸町の少年と話せる1時間",
     description: "",
     profileText:
-      "カエルの男の子「糸町の少年」が、公式LINE電話で1時間、あなたの相談に直接お答えします。仕事も恋愛も人間関係も、まとめてどうぞ。",
+      "カエルの男の子「錦糸町の少年」が、公式LINE電話で1時間、あなたの相談に直接お答えします。仕事も恋愛も人間関係も、まとめてどうぞ。",
     topics: null,
     startPriceJpy: 1000,
     currentPriceJpy: 1000,
@@ -251,7 +251,7 @@ export default function AuctionPage() {
     <main className="mx-auto min-h-screen max-w-md px-4 pb-24 pt-8 text-paper-100">
       <h1 className="mb-1 text-center text-lg font-bold text-gold-400">トークション</h1>
       <p className="mb-6 text-center text-[11px] text-paper-500">
-        糸町の少年と直接話せる1時間(公式LINE電話)を、オークション形式でお分けしています
+        錦糸町の少年と直接話せる1時間(公式LINE電話)を、オークション形式でお分けしています
       </p>
 
       {msg && (
@@ -280,6 +280,9 @@ export default function AuctionPage() {
             </p>
           </div>
           <div className="text-right">
+            {!preOpen && typeof live?.bidCount === "number" && live.bidCount > 0 && (
+              <p className="mb-0.5 text-right text-[10px] text-gold-300">🔥 現在{live.bidCount}件の入札</p>
+            )}
             <p className="text-[10px] text-paper-500">{preOpen ? "開催まで" : "残り時間"}</p>
             <p className={`font-mono text-xl font-bold ${preOpen ? "text-paper-100" : remainMs < 3600000 ? "text-red-400" : "text-paper-100"}`}>
               {preOpen ? formatCountdown(untilOpenMs) : isOpen ? `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}` : "終了"}

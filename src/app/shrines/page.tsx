@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: "今日の運気に合わせた、おすすめの神社・パワースポットを紹介。参拝の作法やレビューも掲載。",
   alternates: { canonical: "/shrines" },
   openGraph: {
-    title: "縁のある神社 | 糸町の少年",
+    title: "縁のある神社 | 錦糸町の少年",
     description: "あなたの運気に合う神社を探す。",
     url: "/shrines",
   },

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: "ふたりの名前から、相性・心の距離・進展のタイミングをAIが診断。姓名判断の考え方をベースにした無料の恋愛相性診断です。",
   alternates: { canonical: "/love" },
   openGraph: {
-    title: "恋愛・相性診断 | 糸町の少年",
+    title: "恋愛・相性診断 | 錦糸町の少年",
     description: "ふたりの名前から、相性を無料診断。",
     url: "/love",
   },

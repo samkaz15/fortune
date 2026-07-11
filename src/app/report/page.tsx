@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: "四柱推命ベースのスコアリングで、今日・今週・今月・来月の運勢と行動指針をお届け。",
   alternates: { canonical: "/report" },
   openGraph: {
-    title: "今日の運勢 | 糸町の少年",
+    title: "今日の運勢 | 錦糸町の少年",
     description: "今日・今週・今月・来月の運勢をチェック。",
     url: "/report",
   },

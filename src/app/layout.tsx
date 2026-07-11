@@ -13,19 +13,19 @@ import { MilkyWayBackground } from "@/components/MilkyWayBackground";
  */
 
 const APP_URL = process.env.APP_URL ?? "http://localhost:3000";
-const SITE_NAME = "糸町の少年";
+import { SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 const SITE_DESCRIPTION =
   "AIがあなたの生年月日・名前から今日の運気とネクストアクションを届ける占いサービス。四柱推命・算命学・姓名判断をもとに、恋愛・仕事・today's fortuneを毎日診断。";
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
-  title: { default: `${SITE_NAME} | 大丈夫。必ずうまくいく。`, template: `%s | ${SITE_NAME}` },
+  title: { default: `${SITE_NAME} | ${SITE_TAGLINE}`, template: `%s | ${SITE_NAME}` },
   description: SITE_DESCRIPTION,
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: SITE_NAME,
-    title: `${SITE_NAME} | 大丈夫。必ずうまくいく。`,
+    title: `${SITE_NAME} | ${SITE_TAGLINE}`,
     description: SITE_DESCRIPTION,
     url: APP_URL,
     locale: "ja_JP",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME} | 大丈夫。必ずうまくいく。`,
+    title: `${SITE_NAME} | ${SITE_TAGLINE}`,
     description: SITE_DESCRIPTION,
     images: ["/character/home_dark.jpg"],
   },
@@ -79,6 +79,19 @@ export default function RootLayout({
           }}
         />
         <MilkyWayBackground />
+        <script
+          type="application/ld+json"
+          // SEO/AEO: WebSite+Organization構造化データ(マーケ03章/Marketing-029系)
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                { "@type": "WebSite", name: "錦糸町の少年", url: "https://fortune-itomachi.vercel.app", inLanguage: "ja" },
+                { "@type": "Organization", name: "株式会社Viwe Point", url: "https://fortune-itomachi.vercel.app/legal/company" },
+              ],
+            }),
+          }}
+        />
         <Header />
         <main className="relative z-10 mx-auto min-h-dvh max-w-md pb-24 pt-14">
           {children}

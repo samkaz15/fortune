@@ -226,7 +226,7 @@ echo "===== P2-4. 神社API(CL18) ====="
 SHRINE_ID=$(PGPASSWORD=itomachi_dev psql -h 127.0.0.1 -U itomachi -d itomachi -t -A -c \
   "INSERT INTO shrines (id, name, prefecture, city, tags, \"generalInfo\") VALUES (gen_random_uuid(), 'テスト稲荷神社', '東京都', '糸町', '[\"金運\",\"仕事運\"]', '由緒あるテスト神社です。') RETURNING id;" | grep -E '^[0-9a-f-]{36}$')
 PGPASSWORD=itomachi_dev psql -h 127.0.0.1 -U itomachi -d itomachi -q -c \
-  "INSERT INTO shrine_reviews (id, \"shrineId\", \"authorType\", \"visitedAt\", blocks) VALUES (gen_random_uuid(), '$SHRINE_ID', 'ceo', NOW(), '{\"block1\":\"朝の光の中、鳥居をくぐった瞬間に空気が変わった。\",\"block3\":\"この場所の気は、動き出す人の背中を押してくれる。\",\"block5\":\"ぜひ参詣して、糸町の少年に感想を話しかけてみて。\"}');"
+  "INSERT INTO shrine_reviews (id, \"shrineId\", \"authorType\", \"visitedAt\", blocks) VALUES (gen_random_uuid(), '$SHRINE_ID', 'ceo', NOW(), '{\"block1\":\"朝の光の中、鳥居をくぐった瞬間に空気が変わった。\",\"block3\":\"この場所の気は、動き出す人の背中を押してくれる。\",\"block5\":\"ぜひ参詣して、錦糸町の少年に感想を話しかけてみて。\"}');"
 code=$(curl -s -b $JAR2 -o /tmp/shrines.json -w "%{http_code}" "$BASE/api/shrines")
 check "GET /api/shrines" "200" "$code"
 has_reco=$(python3 -c "import json; d=json.load(open('/tmp/shrines.json')); print(d['recommendation'] is not None)")

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 /**
- * キャラクタープロンプトは /prompts/chat/system_prompt.v2.4.md から読み込む
+ * キャラクタープロンプトは /prompts/chat/system_prompt.v2.5.md から読み込む(v2.5: 具体性・寄り添い・根拠の原則を追補)
  * (コードにハードコードしない方針はGPT3の申し送り通り維持)。
  * ※ディレクトリ名は歴史的経緯で prompts/chat/ のままだが、チャット機能自体は
  *   2026-07-08の要件⑦で完全廃止済み。このプロンプトは意思決定レポート(decision-report)や
@@ -10,12 +10,12 @@ import path from "node:path";
  * v2.0(スタイル統合前)・v1.0(ツクヨミ・不採用)は履歴として prompts/chat/ に残している。
  */
 function loadCharacterPrompt(): string {
-  const promptPath = path.join(process.cwd(), "prompts", "chat", "system_prompt.v2.4.md");
+  const promptPath = path.join(process.cwd(), "prompts", "chat", "system_prompt.v2.5.md");
   try {
     return readFileSync(promptPath, "utf-8");
   } catch {
     // ファイルが見つからない実行環境(一部のエッジランタイム等)向けの最終フォールバック
-    return "あなたは占いアプリのキャラクター「糸町の少年」です。一人称は「僕」、常にポジティブに、決め打ちで話してください。占術の内訳は開示しないでください。";
+    return "あなたは占いアプリのキャラクター「錦糸町の少年」です。一人称は「僕」、常にポジティブに、決め打ちで話してください。占術の内訳は開示しないでください。";
   }
 }
 

@@ -63,7 +63,7 @@ export function Header() {
       <header className="fixed inset-x-0 top-0 z-40 mx-auto flex h-14 max-w-md items-center justify-between bg-ink-950/80 px-4 backdrop-blur">
         {isTop ? (
           <Link href="/" className="font-display text-lg tracking-wide text-gold-400">
-            糸町の少年
+            錦糸町の少年
           </Link>
         ) : (
           <button

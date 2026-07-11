@@ -11,6 +11,7 @@ import { z } from "zod";
 import { interpretDayStem } from "@/lib/fortune-engine/interpretation-dictionary";
 import { calculateShichu } from "@/lib/fortune-engine/shichu";
 import { calculateKyusei, KyuseiSummary } from "@/lib/fortune-engine/kyusei";
+import { buildGrounding } from "@/lib/fortune-engine/grounding";
 import { calculateSanmei } from "@/lib/fortune-engine/sanmei";
 import { calculateHoroscope } from "@/lib/fortune-engine/horoscope";
 import { calculateSeimei } from "@/lib/fortune-engine/seimei";
@@ -47,6 +48,7 @@ export interface DetailItem {
 
 /** 内容拡充ブロック(要件⑤)。占術シグナルから決定論的に生成し、LLMの成否に依存しない */
 export interface ReportDetails {
+  grounding: string[]; // 占術根拠(天中殺・月破・中宮・命式など。要件6 2026-07-11)
   events: [DetailItem, DetailItem, DetailItem]; // 今日起こりやすい出来事
   cautionPoints: [DetailItem, DetailItem, DetailItem]; // 今日注意すること(理由付き)
   recommendations: [DetailItem, DetailItem, DetailItem]; // 今日おすすめの行動
@@ -136,7 +138,9 @@ export async function generateDailyReport(params: {
   };
 
   // ---- ⑥内容拡充ブロック(要件⑤ 2026-07-08): LLMの成否に依存せず占術シグナルから決定論生成 ----
+  const grounding = buildGrounding(profile.birthDate, date);
   const details = buildDailyDetails({
+    grounding,
     periodLabel: params.periodLabel ?? "今日",
     score: breakdown.final,
     stem: interpretDayStem(shichu.dayStem),
@@ -219,6 +223,7 @@ async function generateWithRetry(input: LlmInput): Promise<ReportContent | null>
  * シグナルだけから組み立てる。乱数は使わず、日付×ユーザーで毎日内容が変わる。
  */
 function buildDailyDetails(m: {
+  grounding: { lines: string[]; hasCautionSign: boolean };
   periodLabel: string;
   score: number;
   stem: { state: string; description: string; action: string };
@@ -273,13 +278,13 @@ function buildDailyDetails(m: {
     ? `${L}のあなたは${score}点、${stem.state}の力が素直に通る追い風の一日です。${kyuseiGood ? `${kyusei.dayStarName}の巡りが外からの流れを運んでくるので、来た話には条件確認だけ添えて乗ってみてください。` : `外の流れに頼らず、自分から仕掛けた動きがそのまま結果につながります。`}${clash ? "予定は動きやすい日なので、変更は「悪い知らせ」ではなく流れの調整だと受け取って大丈夫。" : "会話や相談はまとまりやすいので、後回しにしていた話を切り出すのにも向いています。"}夜は勢いを翌朝に持ち越す意識だけ忘れずに。今日のあなたなら、決めたことはちゃんと形になります。いい一日にしましょう。`
     : `${L}のあなたは${score}点、派手さより「整える」が効く一日です。${stem.description}${clash ? "支がぶつかる巡りで予定は動きやすいですが、それは流れの調整であって後退ではありません。" : `${kyuseiGood ? "外からの声かけには恵まれる日なので、受け取るものは受け取って大丈夫。" : "外に合わせるより自分のリズムを守るほうが消耗しません。"}`}今日の停滞に見えるものは、次の波のための助走です。朝の5分だけ「${stem.action}」に使って、あとは余白を持って過ごしてください。巡りは必ず戻ってきます。明日のあなたが楽になる準備を、今日のあなたがしてあげる日です。`;
 
-  return { events, cautionPoints, recommendations, overview };
+  return { grounding: m.grounding.lines, events, cautionPoints, recommendations, overview };
 }
 
 /**
  * フォールバックレポート(決定論的テンプレート)。
  * LLM未接続の開発環境・LLM障害時でも、仕様の6項目構造を完全に満たすレポートを返す。
- * トーンはCEO_STRAT(糸町の少年・常にポジティブ・決め打ち)に準拠。
+ * トーンはCEO_STRAT(錦糸町の少年・常にポジティブ・決め打ち)に準拠。
  */
 function buildFallbackReport(input: LlmInput): ReportContent {
   const theme = input.userTheme ?? input.fortuneKeyword;

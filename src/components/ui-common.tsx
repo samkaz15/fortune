@@ -91,7 +91,7 @@ export function ShareRow({ text, title }: { text: string; title?: string }) {
   async function nativeShare() {
     track("share", { platform: "instagram_or_tiktok" }); // 計測基盤(2026-07-07・Marketing-083)
     try {
-      if (navigator.share) await navigator.share({ title: title ?? "糸町の少年", text, url });
+      if (navigator.share) await navigator.share({ title: title ?? "錦糸町の少年", text, url });
       else {
         await navigator.clipboard.writeText(`${text} ${url}`);
         setCopied(true);

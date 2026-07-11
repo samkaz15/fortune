@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     "生年月日から、あなたの本質・行動特性・今日の行動指針をAIが診断。四柱推命の考え方をベースにした無料の自己分析診断です。",
   alternates: { canonical: "/self" },
   openGraph: {
-    title: "自分のこと診断 | 糸町の少年",
+    title: "自分のこと診断 | 錦糸町の少年",
     description: "生年月日から、あなたの本質を無料診断。",
     url: "/self",
   },

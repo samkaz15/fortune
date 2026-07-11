@@ -42,7 +42,7 @@ export default async function TopPage() {
         {/* OSのライト/ダーク設定で画像を切替(CEO指定 2026-07-06: ライト=朝/ダーク=夜) */}
         <picture className="block w-full overflow-hidden rounded-card border border-ink-700 shadow-lantern">
           <source srcSet="/character/home_light.jpg" media="(prefers-color-scheme: light)" />
-          <img src="/character/home_dark.jpg" alt="糸町の少年" className="h-40 w-full object-cover" />
+          <img src="/character/home_dark.jpg" alt="錦糸町の少年" className="h-40 w-full object-cover" />
         </picture>
         <p className="font-display text-sm tracking-[0.3em] text-gold-500">ITOMACHI NO SHONEN</p>
         <h1 className="font-display text-3xl leading-snug text-paper-50">
@@ -71,7 +71,7 @@ export default async function TopPage() {
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-base text-paper-200">相談する</h2>
         {/* LP方針(2026-07-06): 相談の入口はv4 LPへ。有料会員は/consult内で自動的に/reportへ振り分け */}
-        <ConsultShortcut href="/auction" label="糸町の少年と直接話す(トークション)" />
+        <ConsultShortcut href="/auction" label="錦糸町の少年と直接話す(トークション)" />
         <div className="grid grid-cols-3 gap-3">
           <ConsultShortcut href="/self" label="自分のこと" />
           <ConsultShortcut href="/love" label="恋愛・相性" />

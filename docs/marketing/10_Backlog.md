@@ -73,7 +73,7 @@
 | Marketing-033 | [#35](https://github.com/samkaz15/fortune/issues/35) | TikTok投稿(今日の運勢シリーズ)制作フロー確立 | S | SNS | 継続 | 未着手 |
 | Marketing-034 | [#36](https://github.com/samkaz15/fortune/issues/36) | TikTok投稿(恋愛運が上がる仕草3選)制作 | A | SNS | 0.5日 | 未着手 |
 | Marketing-035 | [#37](https://github.com/samkaz15/fortune/issues/37) | TikTok投稿(仕事で迷ったときの一言)制作 | A | SNS | 0.5日 | 未着手 |
-| Marketing-036 | [#38](https://github.com/samkaz15/fortune/issues/38) | TikTok投稿(糸町の少年キャラ紹介回)制作 | S | SNS | 0.5日 | 未着手 |
+| Marketing-036 | [#38](https://github.com/samkaz15/fortune/issues/38) | TikTok投稿(錦糸町の少年キャラ紹介回)制作 | S | SNS | 0.5日 | 未着手 |
 | Marketing-037 | [#39](https://github.com/samkaz15/fortune/issues/39) | TikTok投稿(診断あるある)制作 | A | SNS | 0.5日 | 未着手 |
 | Marketing-038 | [#40](https://github.com/samkaz15/fortune/issues/40) | TikTok投稿(四柱推命を10秒で)制作 | A | SNS | 0.5日 | 未着手 |
 | Marketing-039 | [#41](https://github.com/samkaz15/fortune/issues/41) | TikTok投稿(相性診断やってみた実演)制作 | S | SNS | 0.5日 | 未着手 |
@@ -84,14 +84,14 @@
 | Marketing-044 | [#46](https://github.com/samkaz15/fortune/issues/46) | TikTok投稿(占い信じる?信じない?)制作 | B | SNS | 0.5日 | 未着手 |
 | Marketing-045 | [#47](https://github.com/samkaz15/fortune/issues/47) | TikTok投稿(相性デュエット企画)制作 | B | SNS | 0.5日 | 未着手 |
 | Marketing-046 | [#48](https://github.com/samkaz15/fortune/issues/48) | TikTok投稿(仕事診断リアクション)制作 | B | SNS | 0.5日 | 未着手 |
-| Marketing-047 | [#49](https://github.com/samkaz15/fortune/issues/49) | TikTok投稿(糸町の少年の1日)制作 | B | SNS | 0.5日 | 未着手 |
+| Marketing-047 | [#49](https://github.com/samkaz15/fortune/issues/49) | TikTok投稿(錦糸町の少年の1日)制作 | B | SNS | 0.5日 | 未着手 |
 | Marketing-048 | [#50](https://github.com/samkaz15/fortune/issues/50) | TikTok投稿(初詣あるある・季節企画)制作 | C | SNS | 0.5日 | 未着手 |
 | Marketing-049 | [#51](https://github.com/samkaz15/fortune/issues/51) | TikTok投稿(運勢が良い日にやるべきこと)制作 | B | SNS | 0.5日 | 未着手 |
 | Marketing-050 | [#52](https://github.com/samkaz15/fortune/issues/52) | TikTok投稿(転職を考えている人へ)制作 | B | SNS | 0.5日 | 未着手 |
 | Marketing-051 | [#53](https://github.com/samkaz15/fortune/issues/53) | Instagram投稿(今週の運勢カルーセル)制作フロー確立 | S | SNS | 継続 | 未着手 |
 | Marketing-052 | [#54](https://github.com/samkaz15/fortune/issues/54) | Instagram投稿(神社参拝マナー保存版)制作 | A | SNS | 0.5日 | 未着手 |
 | Marketing-053 | [#55](https://github.com/samkaz15/fortune/issues/55) | Instagram投稿(開運アイテムまとめ)制作 | B | SNS | 0.5日 | 未着手 |
-| Marketing-054 | [#56](https://github.com/samkaz15/fortune/issues/56) | Instagram投稿(糸町の少年世界観アート)制作 | B | SNS | 0.5日 | 未着手 |
+| Marketing-054 | [#56](https://github.com/samkaz15/fortune/issues/56) | Instagram投稿(錦糸町の少年世界観アート)制作 | B | SNS | 0.5日 | 未着手 |
 | Marketing-055 | [#57](https://github.com/samkaz15/fortune/issues/57) | Instagram投稿(ユーザー結果紹介・許可制)制作 | A | SNS | 継続 | 未着手 |
 | Marketing-056 | [#58](https://github.com/samkaz15/fortune/issues/58) | Instagram Reels(診断の使い方15秒デモ)制作 | S | SNS | 0.5日 | 未着手 |
 | Marketing-057 | [#59](https://github.com/samkaz15/fortune/issues/59) | Instagramストーリーズ(今日の運勢クイズ形式)運用開始 | A | SNS | 継続 | 未着手 |
@@ -131,7 +131,7 @@
 | Marketing-091 | [#93](https://github.com/samkaz15/fortune/issues/93) | 「占いは背中を押すもの」ブランドメッセージ投稿シリーズ企画 | B | Content | 1日 | 未着手 |
 | Marketing-092 | [#94](https://github.com/samkaz15/fortune/issues/94) | 今年の運勢(年間サマリー)機能の需要検証メモ作成 | C | Content | 0.5日 | 未着手 |
 | Marketing-093 | [#95](https://github.com/samkaz15/fortune/issues/95) | 金運診断コンテンツ需要検証メモ作成 | C | Content | 0.5日 | 未着手 |
-| Marketing-094 | [#96](https://github.com/samkaz15/fortune/issues/96) | 指名検索(「糸町の少年」)のモニタリング設計 | B | SEO | 0.5日 | 未着手 |
+| Marketing-094 | [#96](https://github.com/samkaz15/fortune/issues/96) | 指名検索(「錦糸町の少年」)のモニタリング設計 | B | SEO | 0.5日 | 未着手 |
 | Marketing-095 | [#97](https://github.com/samkaz15/fortune/issues/97) | 競合SNSアカウントの定点観測リスト作成 | B | SNS | 0.5日 | 未着手 |
 | Marketing-096 | [#98](https://github.com/samkaz15/fortune/issues/98) | SNS投稿の週次パフォーマンスレビュー運用開始 | A | SNS | 継続 | 未着手 |
 | Marketing-097 | [#99](https://github.com/samkaz15/fortune/issues/99) | Google Search Console定点モニタリング運用開始 | A | SEO | 継続 | 未着手 |

@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    // 通知メッセージ(CEO_STRAT: 常にポジティブ・決め打ち。糸町の少年の一人称「僕」)
+    // 通知メッセージ(CEO_STRAT: 常にポジティブ・決め打ち。錦糸町の少年の一人称「僕」)
     const message = `今日のあなたの運気は${wave}点。僕が保証する、動くなら今日だよ。`;
 
     const hasWebPush = Boolean(setting.pushSubscription);

@@ -12,7 +12,7 @@ import { track } from "@/lib/track-client";
 export function ReferralShare({ referralCode, invitedCount }: { referralCode: string; invitedCount: number }) {
   const [copied, setCopied] = useState(false);
   const inviteUrl = typeof window !== "undefined" ? `${window.location.origin}/invite/${referralCode}` : "";
-  const shareText = "毎日の運勢をAIが占ってくれる「糸町の少年」、招待コードで登録するとポイントがもらえます";
+  const shareText = "毎日の運勢をAIが占ってくれる「錦糸町の少年」、招待コードで登録するとポイントがもらえます";
   const enc = encodeURIComponent;
 
   async function copyLink() {

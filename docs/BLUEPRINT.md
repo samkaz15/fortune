@@ -1,4 +1,4 @@
-# 糸町の少年 — Architecture Blueprint(Single Source of Truth)
+# 錦糸町の少年 — Architecture Blueprint(Single Source of Truth)
 
 最終更新: 2026-07-08 / 対象コミット: e8369f4
 
@@ -14,12 +14,12 @@
 
 ## ① プロジェクト全体構成
 
-「糸町の少年」は、Next.js 14(App Router)による**フルスタック1リポジトリ構成**の占いWebサービス。フロントエンド・BFF・占術計算エンジンが同一コードベースに同居し、外部サービス(Supabase/Postgres、Upstash Redis、Stripe、Sakana AI/OpenAI)と連携する。
+「錦糸町の少年」は、Next.js 14(App Router)による**フルスタック1リポジトリ構成**の占いWebサービス。フロントエンド・BFF・占術計算エンジンが同一コードベースに同居し、外部サービス(Supabase/Postgres、Upstash Redis、Stripe、Sakana AI/OpenAI)と連携する。
 
 - **ドメイン**: 四柱推命・算命学・姓名判断・暦注(風水)を用いた日次運勢/相性/キャリア占い + AIチャット相談 + 電話占いオークション(トークション)
 - **収益モデル**: サブスク(月額980円・チャット5回/日)+ クレジット追加購入 + トークション落札額
 - **ユーザー種別**: 未ログイン / 無料会員(チャット1回/日) / 有料会員(チャット5回/日+追加購入)
-- **キャラクター**: 「糸町の少年」(蛙のキャラクター)による一人称固定・占術用語非開示のチャット人格
+- **キャラクター**: 「錦糸町の少年」(蛙のキャラクター)による一人称固定・占術用語非開示のチャット人格
 - **世界観**: 天の川・提灯・藍色の夜という和風ファンタジー(MilkyWayBackground共通コンポーネントで全画面統一)
 
 ---
@@ -207,7 +207,7 @@ flowchart TD
     end
 
     HOME["/ ホーム"] -->|"今日の自分の運勢レポートを見る"| REPORT["/report"]
-    HOME -->|"糸町の少年と直接話す"| AUCTION
+    HOME -->|"錦糸町の少年と直接話す"| AUCTION
     HOME -->|"自分のこと/恋愛・相性/仕事"| SELF["/self"] & LOVE["/love"] & WORK["/work"]
 
 
@@ -262,7 +262,7 @@ flowchart TD
 │ [今日の自分の運勢レポートを見る] │
 ├─────────────────────────┤
 │ 相談する                     │
-│ [糸町の少年に相談する](大CTA)  │
+│ [錦糸町の少年に相談する](大CTA)  │
 │ [自分のこと][恋愛・相性][仕事]  │
 ├─────────────────────────┤
 │ <PopularRanking/>            │
@@ -546,7 +546,7 @@ flowchart LR
 
 ## 主要な設計原則(コードコメントから抽出)
 
-1. **占術の内訳を絶対にユーザーへ開示しない**: 「四柱推命」「算命学」等の用語はUIに出さず、キャラクター(糸町の少年)の言葉に翻訳して伝える
+1. **占術の内訳を絶対にユーザーへ開示しない**: 「四柱推命」「算命学」等の用語はUIに出さず、キャラクター(錦糸町の少年)の言葉に翻訳して伝える
 2. **AIはスコアを決めない**: スコアリングはルールベース(`scoring.ts`)で決定論的に算出し、LLMは解釈・文章生成のみを担当する(監査可能性の確保)
 3. **気象値の生表示禁止**: 気圧等の生値をLLMに渡さず、`environment.ts`で人間行動キーワードに事前翻訳してから渡す
 4. **3段フォールバックでサービスを止めない**: LLM層はSakana AI→OpenAI→辞書ベースの順で必ず何かを返す設計
@@ -655,5 +655,5 @@ flowchart LR
 
 ### LP(report-ui)と占い相談導線の廃止(2026-07-08 追加指示)
 - `public/report-ui/index.html`(旧v4 LP・手動同期運用)と入口`/consult`を削除。LP内ハンバーガーの「相談チャット(デモ)」もLPごと消滅。
-- 接続の張り替え: BottomNav/Headerの「占い相談」項目は削除。ホームの「糸町の少年に相談する」→トークション(`/auction`)。人気ランキングと結果画面の推薦リンクは`categoryPage()`(recommendation.tsに一元化: SELF→/self, COMPATIBILITY→/love, BUSINESS→/work)で対応する無料診断ページへ。恋愛/仕事結果のFloatingCTAは要件⑥と同方針で`/auth/signup?from=`へ。
+- 接続の張り替え: BottomNav/Headerの「占い相談」項目は削除。ホームの「錦糸町の少年に相談する」→トークション(`/auction`)。人気ランキングと結果画面の推薦リンクは`categoryPage()`(recommendation.tsに一元化: SELF→/self, COMPATIBILITY→/love, BUSINESS→/work)で対応する無料診断ページへ。恋愛/仕事結果のFloatingCTAは要件⑥と同方針で`/auth/signup?from=`へ。
 - middlewareのreport-ui除外設定も撤去。

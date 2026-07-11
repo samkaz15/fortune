@@ -7,10 +7,10 @@ import PlansPageClient from "./PlansPageClient";
  */
 export const metadata: Metadata = {
   title: "プラン・お支払い | 月額980円で毎日の運勢を",
-  description: "糸町の少年のサブスクプラン・追加クレジットのご案内。初月500円でチャット占い相談が使い放題。",
+  description: "錦糸町の少年のサブスクプラン・追加クレジットのご案内。初月500円でチャット占い相談が使い放題。",
   alternates: { canonical: "/plans" },
   openGraph: {
-    title: "プラン・お支払い | 糸町の少年",
+    title: "プラン・お支払い | 錦糸町の少年",
     description: "月額980円で毎日の運勢を。",
     url: "/plans",
   },

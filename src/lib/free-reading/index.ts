@@ -16,6 +16,7 @@ import { calculateHoroscope } from "@/lib/fortune-engine/horoscope";
 import { calculateSeimei } from "@/lib/fortune-engine/seimei";
 import { interpretDayStem, fiveElementAdjustment } from "@/lib/fortune-engine/interpretation-dictionary";
 import { CHARACTER_PROMPT, ANALYSIS_PROMPT } from "@/lib/fortune-engine";
+import { buildGrounding } from "@/lib/fortune-engine/grounding";
 import type { WeatherContext } from "@/lib/weather";
 
 export interface FreeReadingSections {
@@ -33,6 +34,7 @@ export interface FreeReadingSections {
 
 export interface FreeReadingResult {
   sections: FreeReadingSections;
+  grounding: string[]; // 占術根拠(天中殺・月破・中宮・命式。要件6 2026-07-11)
   wave: number;
   elementNote: string | null;
   /** サブスク限定の深掘り素材(既存ペイウォール仕様を維持) */
@@ -70,11 +72,13 @@ export async function generateFreeReading(params: {
     elementNote,
   };
 
+  const grounding = buildGrounding(birthDate, new Date());
   const llm = await tryLlmReading(name, signals);
   const sections = llm ?? composeFromDictionaries(name, { shichu, stem, sanmei, horoscope, seimei, weather, elementNote });
 
   return {
     sections,
+    grounding: grounding.lines,
     wave: shichu.wave,
     elementNote,
     deepMaterial: { behaviors: sanmei.star.behaviors, ngEnvironment: sanmei.star.ng_environment },

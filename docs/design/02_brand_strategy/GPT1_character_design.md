@@ -4,7 +4,7 @@
 > 本ドキュメントの「ツクヨミ」案はCEOにより不採用となりました。
 > 正式なキャラクター設定は
 > [`CEO_STRAT_character_positioning_approval.md`](../00_ceo_decisions/CEO_STRAT_character_positioning_approval.md)
-> を参照してください（確定キャラクター：糸町の少年本人、カエル、男の子、一人称「僕」）。
+> を参照してください（確定キャラクター：錦糸町の少年本人、カエル、男の子、一人称「僕」）。
 > 本ドキュメントは検討過程の記録として保持しています。
 
 **タスクID**: GPT1

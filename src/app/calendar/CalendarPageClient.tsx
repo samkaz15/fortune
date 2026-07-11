@@ -38,7 +38,7 @@ function shareGoogle(data: FMonth) {
   const best = data.days.find((d) => d.isBest);
   if (!best) return alert("今月の開運日が見つかりませんでした");
   const ymd = best.date.replaceAll("-", "");
-  const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent("開運日(糸町の少年)")}&dates=${ymd}/${ymd}&details=${encodeURIComponent(`暦の吉日: ${best.good.join("・") || "—"}。大事なこと・新しいことはこの日に。`)}`;
+  const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent("開運日(錦糸町の少年)")}&dates=${ymd}/${ymd}&details=${encodeURIComponent(`暦の吉日: ${best.good.join("・") || "—"}。大事なこと・新しいことはこの日に。`)}`;
   window.open(url, "_blank");
 }
 
@@ -52,7 +52,7 @@ function downloadIcs(data: FMonth) {
       "BEGIN:VEVENT",
       `DTSTART;VALUE=DATE:${ymd}`,
       `DTEND;VALUE=DATE:${ymd}`,
-      `SUMMARY:${d.isBest ? "開運日(糸町の少年)" : "注意日(糸町の少年)"}`,
+      `SUMMARY:${d.isBest ? "開運日(錦糸町の少年)" : "注意日(錦糸町の少年)"}`,
       `DESCRIPTION:${d.isBest ? `暦の吉日: ${d.good.join("・") || "—"}` : "大事な決断は避けて、休息と準備の日に"}`,
       "END:VEVENT"
     );

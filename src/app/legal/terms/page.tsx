@@ -10,7 +10,7 @@ export default function TermsPage() {
     <div className="px-5 pt-6 pb-10">
       <h1 className="mb-6 text-center font-display text-lg text-paper-50">利用規約</h1>
       <p className="mb-6 text-xs leading-relaxed text-paper-400">
-        この利用規約(以下「本規約」)は、株式会社Viwe Point(以下「当社」)が提供する占いサービス「糸町の少年」(以下「本サービス」)の利用条件を定めるものです。ご利用にあたっては本規約に同意いただいたものとみなします。
+        この利用規約(以下「本規約」)は、株式会社Viwe Point(以下「当社」)が提供する占いサービス「錦糸町の少年」(以下「本サービス」)の利用条件を定めるものです。ご利用にあたっては本規約に同意いただいたものとみなします。
       </p>
       <S t="第1条(サービス内容)">
         本サービスは、生年月日・氏名等の入力情報をもとに、AIおよび占術ロジックを用いて運勢・相性等の鑑定結果や行動の提案を提供するエンターテインメントサービスです。

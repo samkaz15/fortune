@@ -28,6 +28,7 @@ interface Sections {
 interface Reading {
   name: string;
   tier: "guest" | "member" | "paid";
+  grounding: string[];
   sections: Sections;
   memberLocked: boolean; // 非登録: 05〜10が未開放
   wave: number;
@@ -141,12 +142,20 @@ export default function SelfPageClient() {
       )}
 
       {phase === "loading" && (
-        <DramaticLoading messages={["名前と生年月日を、読み解いています、、", "本質の型と重ねています", "見えました。"]} />
+        <DramaticLoading messages={["天の川から、あなたの糸をたどっています、、", "星々に本質の型を重ねています", "見えました。"]} />
       )}
 
       {phase === "result" && r && (
         <div className="pb-28 pt-4">
           <ScrollProgress />
+          <div className="mb-4 rounded-card border border-ink-700 bg-ink-900/50 p-5">
+            <p className="text-[9px] font-bold tracking-widest text-gold-400">🌌 ｜ 今日の星回り(占いの根拠)</p>
+            <ul className="mt-2 space-y-2">
+              {r.grounding.map((g, i) => (
+                <li key={i} className="flex gap-2 text-xs leading-relaxed text-paper-300"><span className="text-gold-500">✦</span><span>{g}</span></li>
+              ))}
+            </ul>
+          </div>
           <Section no="01" title="あなたの本質" rows={[
             ["性格", r.sections.essence.personality],
             ["才能", r.sections.essence.talent],
@@ -226,7 +235,7 @@ export default function SelfPageClient() {
           )}
           {r.sections.closing && (
           <div className="mb-4 rounded-card border border-gold-500/40 bg-gold-500/5 p-5">
-            <p className="text-[9px] font-bold tracking-widest text-gold-400">10 ｜ 糸町の少年から</p>
+            <p className="text-[9px] font-bold tracking-widest text-gold-400">10 ｜ 錦糸町の少年から</p>
             <p className="mt-2 text-sm leading-relaxed text-paper-100">{r.sections.closing}</p>
           </div>
           )}
@@ -250,7 +259,7 @@ export default function SelfPageClient() {
             </div>
           )}
 
-          <ShareRow text={`${r.name}の本質、当たってた気がする — 糸町の少年`} />
+          <ShareRow text={`${r.name}の本質、当たってた気がする — 錦糸町の少年`} />
           <FloatingCTA label="会員登録して、続きを占う" href="/auth/signup?from=/self" />
         </div>
       )}

@@ -171,7 +171,7 @@ export default function WorkPageClient() {
               </div>
             )}
 
-            <ShareRow text={`働き方の本質、見てもらった — 糸町の少年`} />
+            <ShareRow text={`働き方の本質、見てもらった — 錦糸町の少年`} />
             <div className="my-6 flex h-[100px] items-center justify-center rounded-2xl border border-dashed border-ink-700/50 text-[9px] tracking-widest text-ink-600">
               キャリア参考情報（外部リンク）
             </div>
