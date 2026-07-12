@@ -15,7 +15,7 @@ import { prisma } from "@/lib/db";
  * 前提として、Stripeダッシュボードでこのエンドポイントを
  * Webhook宛先として登録し、STRIPE_WEBHOOK_SECRET を .env に設定すること。
  * 対象イベント: checkout.session.completed / customer.subscription.updated /
- *              customer.subscription.deleted
+ *              customer.subscription.deleted / invoice.payment_failed
  *
  * Next.js App RouterのRoute Handlerはデフォルトでbodyをパースしないため、
  * 署名検証に必要な生のリクエストボディがそのまま渡ってくる。
@@ -48,6 +48,11 @@ export async function POST(req: NextRequest) {
       case "customer.subscription.updated":
       case "customer.subscription.deleted":
         await handleSubscriptionSync(event.data.object as Stripe.Subscription);
+        break;
+      case "invoice.payment_failed":
+        // 更新決済の失敗(2026-07-12追加)。subscription.updated(past_due)でも同期されるが、
+        // 失敗イベント自体を計測に残し、即時にpausedへ倒す(サービス側の閲覧制限を早く効かせる)
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
         break;
       default:
         // 未ハンドルのイベントは無視してよい(Stripe側は2xxを受け取れば再送しない)
@@ -182,4 +187,17 @@ function mapStripeStatus(stripeStatus: Stripe.Subscription.Status): string {
     default:
       return "inactive";
   }
+}
+
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  const subscriptionId =
+    typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id;
+  if (!subscriptionId) return;
+  const existing = await prisma.subscription.findFirst({ where: { stripeSubscriptionId: subscriptionId } });
+  if (!existing) return;
+  await prisma.subscription.update({
+    where: { userId: existing.userId },
+    data: { status: "paused" },
+  });
+  trackEvent("payment_failed", { kind: "subscription_renewal" }, existing.userId);
 }

@@ -41,7 +41,7 @@ npm run dev
 | CL7 | DB設計 | `prisma/schema.prisma` |
 | CL8 | 占術統合エンジン実装 | `src/lib/fortune-engine/` 完了。**ただし姓名判断・算命学・四柱推命は暫定ロジック**（各ファイル冒頭のコメント参照）。CEO占術監修(CEO1)後に正式ロジックへ差し替え必須 |
 | CL9 | 占いチャット機能実装 | `src/components/ChatWindow.tsx` + `/api/chat` |
-| CL10 | 決済実装（サブスク/クレジット/オークション） | API実装済み。**Stripe Webhook(決済確定処理)は未実装**、下記「残タスク」参照 |
+| CL10 | 決済実装（サブスク/クレジット/オークション） | API実装済み。**Stripe Webhook(決済確定処理)は実装済み(2026-07-12監査: 署名検証・サブスク/オークション/クレジット・invoice.payment_failed対応。残: Stripeダッシュボードでのエンドポイント登録)**、下記「残タスク」参照 |
 | CL11 | マイページ・共通画面実装 | `src/app/mypage/` |
 | CL12 | 天気API連携 | `src/lib/weather.ts`（Open-Meteo想定） |
 | CL13 | 結合テスト | 未着手（下記参照） |

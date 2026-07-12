@@ -15,6 +15,7 @@ export type AnalyticsEventName =
   | "chat_message"
   | "report_generated"
   | "payment_succeeded"
+  | "payment_failed" // 更新決済失敗(2026-07-12 webhook監査で追加)
   | "subscription_started"
   | "experiment_exposure"
   | "signup"

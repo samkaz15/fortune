@@ -252,23 +252,20 @@ test("紫微斗数(簡易): 命宮・身宮の起宮式と旧暦月テーブル"
   assert.equal(calculateShibi(new Date(Date.UTC(1990, 10, 3)), null), null);
 });
 
-test("マルチインデックス統合: 10指標が束ねられ、欠けても他が返る", () => {
+test("マルチインデックス統合: 9指標が束ねられ、欠けても他が返る", () => {
   const full = buildMultiIndexReading({
     birthDate: new Date(Date.UTC(1990, 10, 3)),
     birthTime: "14:30",
     familyName: "山田",
     givenName: "太郎",
-    mbtiType: "INTJ",
   });
   assert.equal(full.shichu.dayPillar, "壬申");
-  assert.equal(full.mbti?.type, "INTJ");
   assert.ok(full.shibi);
-  assert.ok(full.indexCount >= 9);
+  assert.ok(full.indexCount >= 8);
 
   // 最小情報(生年月日のみ)でも落ちずに返る
   const minimal = buildMultiIndexReading({ birthDate: new Date(Date.UTC(1990, 10, 3)) });
   assert.equal(minimal.seimei, null);
-  assert.equal(minimal.mbti, null);
   assert.equal(minimal.shibi, null); // 時刻なし
   assert.ok(minimal.indexCount >= 6);
 });

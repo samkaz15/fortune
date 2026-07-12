@@ -36,6 +36,8 @@ export interface ChatTurnResult {
   reply: string;
   progressCheckTriggered: boolean;
   retrievedKnowledgeCount: number;
+  /** Claude生成が成功したか。falseはフォールバック文言(Quota払い戻し対象=CEO_QUOTA_definition「返信が届いた回数」) */
+  llmSucceeded: boolean;
 }
 
 /**
@@ -80,7 +82,6 @@ export async function runChatTurn(params: {
       birthTime: profile.birthTime,
       familyName: nameParts[0] ?? null,
       givenName: nameParts[1] ?? nameParts[0] ?? null,
-      mbtiType: profile.mbti,
     });
     const taiun = calculateTaiun(profile.birthDate, profile.birthTime, profile.gender);
     divination = {
@@ -131,7 +132,12 @@ export async function runChatTurn(params: {
     data: { sessionId, role: "assistant", content: finalReply },
   });
 
-  return { reply: finalReply, progressCheckTriggered, retrievedKnowledgeCount: knowledge.length };
+  return {
+    reply: finalReply,
+    progressCheckTriggered,
+    retrievedKnowledgeCount: knowledge.length,
+    llmSucceeded: reply !== null,
+  };
 }
 
 function ageOf(birthDate: Date): number {

@@ -60,7 +60,6 @@ model UserProfile {
   birthDate   DateTime // 四柱推命・算命学・ホロスコープに使用
   birthTime   String? // 出生時間（任意、HH:mm）。四柱推命の精度向上に使う
   gender      String? // male | female | other | unspecified
-  mbti        String? // MBTIタイプ(自己申告・大文字4字。マルチインデックス2026-07-12)
   displayName String? // 表示用ニックネーム（非PII寄り。マイページ等で表示）
   avatar      String? // ユーザー設定アイコン(縮小済みJPEGのdata URL・上限100KB)
   createdAt   DateTime @default(now())

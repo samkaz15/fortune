@@ -1,8 +1,9 @@
 /**
  * マルチインデックス統合層 (CEO指示 2026-07-12: 10指標で「より確率の高い占い」)
  *
- * 10指標: 四柱推命・算命学・姓名判断・九星気学(既存4) +
- *         MBTI・カバラ数秘術・現代数秘術・動物アーキタイプ・紫微斗数(簡易)・東洋思想=五行バランス(新6)
+ * 9指標: 四柱推命・算命学・姓名判断・九星気学(既存4) +
+ *        カバラ数秘術・現代数秘術・動物アーキタイプ・紫微斗数(簡易)・東洋思想=五行バランス(新5)
+ * ※MBTIは自己申告入力が必要でUXコストが高いためキャンセル(CEO判断 2026-07-12)
  *
  * 役割: 各エンジンの決定論的な計算結果を1つの構造体(MultiIndexReading)に束ね、
  * LLM(チャット・レポート・無料鑑定)へ「根拠の束」として渡す。
@@ -15,7 +16,6 @@ import { calculateSanmei } from "./sanmei";
 import { calculateSeimei } from "./seimei";
 import { calculateKyusei } from "./kyusei";
 import { calculateNumerology } from "./indexes/numerology";
-import { interpretMbti } from "./indexes/mbti";
 import { calculateAnimal, calculateGogyoBalance } from "./indexes/animal-gogyo";
 import { calculateShibi } from "./indexes/shibi";
 
@@ -25,7 +25,6 @@ export interface MultiIndexReading {
   seimei: { soukaku: number; jinkaku: number; score: number } | null;
   kyusei: { userStar: string } | null;
   numerology: { modern: number; kabbalah: number; keywords: string[] };
-  mbti: { type: string; group: string; keywords: string[] } | null;
   animal: { animal: string; keywords: string[] };
   shibi: { meiguu: string; shinguu: string; keywords: string[] } | null;
   gogyo: { dominant: string; lacking: string | null; advice: string };
@@ -40,10 +39,9 @@ export function buildMultiIndexReading(params: {
   birthTime?: string | null;
   familyName?: string | null;
   givenName?: string | null;
-  mbtiType?: string | null;
   targetDate?: Date;
 }): MultiIndexReading {
-  const { birthDate, birthTime, familyName, givenName, mbtiType } = params;
+  const { birthDate, birthTime, familyName, givenName } = params;
   const targetDate = params.targetDate ?? new Date();
 
   const fp = calculateFourPillars(birthDate, birthTime);
@@ -57,7 +55,6 @@ export function buildMultiIndexReading(params: {
     kyusei = null; // 九星計算が失敗しても他の指標は返す
   }
   const numerology = calculateNumerology(birthDate);
-  const mbti = interpretMbti(mbtiType);
   const animal = calculateAnimal(birthDate, birthTime);
   const shibi = calculateShibi(birthDate, birthTime);
   const gogyo = calculateGogyoBalance(birthDate, birthTime);
@@ -65,7 +62,6 @@ export function buildMultiIndexReading(params: {
   // ---- 収束(convergence)抽出: 複数指標で重なるキーワードを機械検出 ----
   const keywordSets: string[][] = [
     numerology.keywordsModern,
-    mbti?.keywords ?? [],
     animal.keywords,
     shibi?.keywords ?? [],
   ];
@@ -75,7 +71,7 @@ export function buildMultiIndexReading(params: {
   }
   const convergence = [...counts.entries()].filter(([, c]) => c >= 2).map(([kw]) => kw);
 
-  const available = [true, true, Boolean(seimei), Boolean(kyusei), true, true, Boolean(mbti), true, Boolean(shibi), true];
+  const available = [true, true, Boolean(seimei), Boolean(kyusei), true, true, true, Boolean(shibi), true];
 
   return {
     shichu: {
@@ -97,7 +93,6 @@ export function buildMultiIndexReading(params: {
       kabbalah: numerology.lifePathKabbalah,
       keywords: numerology.keywordsModern,
     },
-    mbti,
     animal: { animal: animal.animal, keywords: animal.keywords },
     shibi: shibi ? { meiguu: shibi.meiguu, shinguu: shibi.shinguu, keywords: shibi.keywords } : null,
     gogyo: { dominant: gogyo.dominant, lacking: gogyo.lacking, advice: gogyo.advice },

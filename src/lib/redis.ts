@@ -91,7 +91,9 @@ const DAILY_FREE_LIMIT = 5; // 有料会員の1日あたり質問回数
 export const FREE_MEMBER_DAILY_LIMIT = 1; // 無料会員は1回まで(UI仕様v5 2026-07-06)
 
 function todayKey(userId: string) {
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (JST変換は本番でタイムゾーン処理を追加すること)
+  // JST基準の日付キー(2026-07-12修正)。旧実装はUTC日付だったため、
+  // JST 0:00〜8:59の間「前日の枠」を消費し続けるバグがあった(日次リセットが9時にずれる)。
+  const today = new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
   return `usage:daily:${userId}:${today}`;
 }
 

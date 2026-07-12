@@ -58,6 +58,15 @@ export function ChatWindow() {
         setError("続きはログインすると相談できます!");
         return;
       }
+      if (res.status === 402) {
+        const d = await res.json().catch(() => null);
+        setError(
+          d?.plan === "paid"
+            ? "今日の相談枠(5回)を使い切りました。また明日お待ちしてます!"
+            : "今日の無料相談枠を使い切りました。プレミアムなら1日5回まで相談できます!"
+        );
+        return;
+      }
       if (!res.ok) throw new Error(String(res.status));
       const data = await res.json();
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
