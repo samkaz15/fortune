@@ -9,6 +9,9 @@
  * かつuserId絞り込みが先に効くことでtrgmインデックスの実用速度が出る)。
  */
 import { prisma } from "@/lib/db";
+import { extractKeywords } from "./keywords";
+
+export { extractKeywords }; // 後方互換のため再export
 import type { ConsultCategory } from "@/generated/prisma/enums";
 
 export interface RetrievedKnowledge {
@@ -34,7 +37,8 @@ export interface RetrievedLifeEvent {
   similarity: number;
 }
 
-const TRGM_THRESHOLD = 0.15; // pg_trgmの類似度しきい値(0-1)。低いほど広く拾う。要チューニング
+const TRGM_THRESHOLD = 0.05; // pg_trgmの類似度しきい値。日本語は文字trgmのため低め(結合テストで実測調整 2026-07-12)
+
 
 /**
  * 今回の相談文に近い過去のKnowledgeEntryをpg_trgmで検索する(RAGの中核)。
@@ -43,18 +47,33 @@ const TRGM_THRESHOLD = 0.15; // pg_trgmの類似度しきい値(0-1)。低いほ
  */
 export async function searchKnowledge(userId: string, queryText: string, limit = 5): Promise<RetrievedKnowledge[]> {
   if (!queryText.trim()) return [];
-  const rows = await prisma.$queryRaw<
-    Array<RetrievedKnowledge & { tags: unknown }>
-  >`
+  const keywords = extractKeywords(queryText);
+
+  // 動的OR条件(similarity + キーワードILIKE)。パラメータは全てプレースホルダ経由
+  const params: unknown[] = [userId, queryText];
+  const kwConds: string[] = [];
+  const kwHits: string[] = [];
+  for (const kw of keywords) {
+    params.push(`%${kw}%`);
+    const idx = params.length;
+    kwConds.push(`"userConcern" ILIKE $${idx} OR "finalAdvice" ILIKE $${idx}`);
+    kwHits.push(`(CASE WHEN "userConcern" ILIKE $${idx} OR "finalAdvice" ILIKE $${idx} THEN 1 ELSE 0 END)`);
+  }
+  params.push(limit);
+
+  const sql = `
     SELECT id, category, "userConcern", "finalAdvice", "nextAction", tags, importance, "createdAt",
-           GREATEST(similarity("userConcern", ${queryText}), similarity("finalAdvice", ${queryText})) AS similarity
+           GREATEST(similarity("userConcern", $2), similarity("finalAdvice", $2)) AS similarity,
+           ${kwHits.length > 0 ? kwHits.join(" + ") : "0"} AS keyword_hits
     FROM knowledge_entries
-    WHERE "userId" = ${userId}
-      AND (similarity("userConcern", ${queryText}) > ${TRGM_THRESHOLD}
-           OR similarity("finalAdvice", ${queryText}) > ${TRGM_THRESHOLD})
-    ORDER BY similarity DESC, importance DESC, "createdAt" DESC
-    LIMIT ${limit}
+    WHERE "userId" = $1
+      AND (similarity("userConcern", $2) > ${TRGM_THRESHOLD}
+           OR similarity("finalAdvice", $2) > ${TRGM_THRESHOLD}
+           ${kwConds.length > 0 ? `OR ${kwConds.join(" OR ")}` : ""})
+    ORDER BY keyword_hits DESC, similarity DESC, importance DESC, "createdAt" DESC
+    LIMIT $${params.length}
   `;
+  const rows = await prisma.$queryRawUnsafe<Array<RetrievedKnowledge & { tags: unknown }>>(sql, ...params);
   // 参照時刻を更新(記憶の鮮度管理。失敗しても検索結果は返す)
   if (rows.length > 0) {
     void prisma.knowledgeEntry
@@ -67,16 +86,27 @@ export async function searchKnowledge(userId: string, queryText: string, limit =
 /** 相談文に近い過去のLifeEventを検索する(「人生の変遷」の想起) */
 export async function searchLifeEvents(userId: string, queryText: string, limit = 3): Promise<RetrievedLifeEvent[]> {
   if (!queryText.trim()) return [];
-  return prisma.$queryRaw<RetrievedLifeEvent[]>`
+  const keywords = extractKeywords(queryText);
+  const params: unknown[] = [userId, queryText];
+  const kwConds: string[] = [];
+  for (const kw of keywords) {
+    params.push(`%${kw}%`);
+    const idx = params.length;
+    kwConds.push(`title ILIKE $${idx} OR COALESCE(description,'') ILIKE $${idx}`);
+  }
+  params.push(limit);
+  const sql = `
     SELECT id, title, description, category, "occurredAt", emotion, importance,
-           GREATEST(similarity(title, ${queryText}), similarity(COALESCE(description, ''), ${queryText})) AS similarity
+           GREATEST(similarity(title, $2), similarity(COALESCE(description, ''), $2)) AS similarity
     FROM life_events
-    WHERE "userId" = ${userId}
-      AND (similarity(title, ${queryText}) > ${TRGM_THRESHOLD}
-           OR similarity(COALESCE(description, ''), ${queryText}) > ${TRGM_THRESHOLD})
+    WHERE "userId" = $1
+      AND (similarity(title, $2) > ${TRGM_THRESHOLD}
+           OR similarity(COALESCE(description, ''), $2) > ${TRGM_THRESHOLD}
+           ${kwConds.length > 0 ? `OR ${kwConds.join(" OR ")}` : ""})
     ORDER BY similarity DESC, importance DESC
-    LIMIT ${limit}
+    LIMIT $${params.length}
   `;
+  return prisma.$queryRawUnsafe<RetrievedLifeEvent[]>(sql, ...params);
 }
 
 /** 現在の人生カルテを取得(無ければnull。初回相談者はカルテがまだ無い) */
