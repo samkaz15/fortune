@@ -70,13 +70,27 @@ interface ProfileInput {
 }
 
 function loadTaskPrompt(): string {
+  // v1.2(2026-07-12): Layer0コンサル方針を反映した断定調・3部構成フレームワーク版。
+  // 見つからない環境では旧v1.1へフォールバックする。
+  for (const file of ["decision_report_task.v1.2.md", "decision_report_task.v1.1.md"]) {
+    try {
+      return readFileSync(path.join(process.cwd(), "prompts", "chat", file), "utf-8");
+    } catch {
+      /* 次の候補へ */
+    }
+  }
+  return "今日の意思決定レポートを指定スキーマのJSONのみで出力してください。";
+}
+
+/** Layer0: CEO指示のコンサル方針(2026-07-12)。存在すればsystem promptの最上段に積む */
+function loadConsultingPolicy(): string {
   try {
     return readFileSync(
-      path.join(process.cwd(), "prompts", "chat", "decision_report_task.v1.1.md"),
+      path.join(process.cwd(), "prompts", "consulting", "system_prompt.v2.0.md"),
       "utf-8"
     );
   } catch {
-    return "今日の意思決定レポートを指定スキーマのJSONのみで出力してください。";
+    return "";
   }
 }
 
@@ -198,7 +212,7 @@ async function generateWithRetry(input: LlmInput): Promise<ReportContent | null>
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
-          system_prompt: `${CHARACTER_PROMPT}\n\n${loadTaskPrompt()}`,
+          system_prompt: `${loadConsultingPolicy()}\n\n${CHARACTER_PROMPT}\n\n${loadTaskPrompt()}`.trim(),
           user_input: JSON.stringify(input),
           response_format: "json",
         }),
