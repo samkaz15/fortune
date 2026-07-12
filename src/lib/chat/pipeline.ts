@@ -15,6 +15,7 @@ import { CHARACTER_PROMPT } from "@/lib/fortune-engine";
 import { searchKnowledge, searchLifeEvents, getUserKarte, getUnresolvedNextActions, updateUserKarte, type RetrievedKnowledge, type RetrievedLifeEvent } from "@/lib/karte/repository";
 import { calculateTaiun } from "@/lib/fortune-engine/taiun";
 import { buildMultiIndexReading } from "@/lib/fortune-engine/multi-index";
+import { searchOracleKnowledge, formatOracleForPrompt } from "@/lib/oracle/knowledge-base";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { ConsultCategory } from "@/generated/prisma/enums";
@@ -90,6 +91,9 @@ export async function runChatTurn(params: {
     };
   }
 
+  // ---- 師匠知見ベース(Oracle KB): 発言に関連するCEO直伝ノウハウを想起 ----
+  const oracleEntries = searchOracleKnowledge(userMessage);
+
   // ---- 動的発火トリガー(1/7): 未回収の行動提案があれば進捗回収モードへ ----
   const progressCheckTriggered = unresolvedActions.length > 0 && shouldTriggerProgressCheck();
 
@@ -112,6 +116,7 @@ export async function runChatTurn(params: {
     `関連する人生イベント: ${JSON.stringify(lifeEvents.map((e: RetrievedLifeEvent) => ({ title: e.title, when: e.occurredAt })))}`,
     `現在の人生カルテ: ${karte ? JSON.stringify({ personality: karte.basicPersonality, trends: karte.concernTrends, insights: karte.aiInsights }) : "まだ蓄積なし(初回相談)"}`,
     `命式データ: ${JSON.stringify(divination)}`,
+    formatOracleForPrompt(oracleEntries),
     progressCheckTriggered
       ? `# 進捗回収モード発火\n以下の未回収の行動提案について、実践できたか進捗確認・逆質問を最優先で行うこと: ${JSON.stringify(unresolvedActions.map((a: { nextAction: string }) => a.nextAction))}`
       : "",
