@@ -98,12 +98,18 @@ export async function runChatTurn(params: {
   const progressCheckTriggered = unresolvedActions.length > 0 && shouldTriggerProgressCheck();
 
   // ---- 4. パーソナリティ分析の更新(直近の会話から悩み傾向を推定し、カルテへ反映) ----
-  // Phase1実装: カテゴリ頻度による簡易反映(LLM要約への差し替えは監修後・Phase2)
-  const concernTrends = {
-    ...((karte?.concernTrends as Record<string, number>) ?? {}),
-  };
-  concernTrends[category] = (concernTrends[category] ?? 0) + 1;
-  await updateUserKarte(userId, { concernTrends }, "session_completed");
+  // Phase1実装: カテゴリ頻度による簡易反映(LLM要約への差し替えは監修後・Phase2)。
+  // 【2026-07-12最終デバッグ修正】旧実装は毎メッセージで更新+スナップショット退避が走り、
+  // 10往復の会話でversion+10・スナップショット10件と肥大していた。
+  // 「悩み傾向のカウント」はセッション単位の概念なので、セッションの初回発言時のみ更新する。
+  const isFirstMessageOfSession = history.filter((m: { role: string }) => m.role === "user").length <= 1;
+  if (isFirstMessageOfSession) {
+    const concernTrends = {
+      ...((karte?.concernTrends as Record<string, number>) ?? {}),
+    };
+    concernTrends[category] = (concernTrends[category] ?? 0) + 1;
+    await updateUserKarte(userId, { concernTrends }, "session_completed");
+  }
 
   // ---- 5. 回答生成 ----
   const systemPrompt = [

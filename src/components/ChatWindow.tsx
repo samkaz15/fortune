@@ -34,7 +34,13 @@ export function ChatWindow() {
         setSessionId(data.sessionId);
         setMessages(data.messages.map((m: ChatMessage) => ({ id: m.id, role: m.role, content: m.content })));
       })
-      .catch(() => setError("チャットの準備に失敗しました。時間をおいて再度お試しください"));
+      .catch((status) =>
+        setError(
+          status === 401
+            ? "相談はログインすると使えます!(無料で1日1回)" // 未ログインは正常系として案内(2026-07-12最終デバッグ)
+            : "チャットの準備に失敗しました。時間をおいて再度お試しください"
+        )
+      );
   }, []);
 
   useEffect(() => {
