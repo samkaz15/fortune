@@ -3,6 +3,7 @@ import { ScoreOrb } from "@/components/ScoreOrb";
 import { prisma } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/auth";
 import { calculateShichu } from "@/lib/fortune-engine/shichu";
+import { jstToday } from "@/lib/jst";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,41 @@ async function todayScore(): Promise<number> {
   }
   return fallback;
 }
+
+/**
+ * 今日の一言(AI人生コンパス Step1・タスク4 / 2026-07-12)。
+ * ログイン済みで当日のDailyReport(period=today)が生成済みなら advice(なければ summary)を表示。
+ * 未生成・未ログイン・DB不調時は日替わりの汎用文言にフォールバック。
+ * ここではレポートの新規生成は行わない(生成は/report側の責務。ホームは読むだけ=速度優先)。
+ */
+async function todayOneLiner(): Promise<string> {
+  const FALLBACKS = [
+    "今日は「流れに乗る」日。\n焦らなくても大丈夫。",
+    "小さな一歩が、大きな流れを呼ぶ日。",
+    "迷ったら「いつもと違う方」を選んでみて。",
+    "今日は足元を整える日。準備が運を連れてくる。",
+    "大丈夫。必ずうまくいく。",
+  ];
+  const fallback = FALLBACKS[new Date().getDate() % FALLBACKS.length];
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) return fallback;
+    const report = await prisma.dailyReport.findUnique({
+      where: {
+        userId_reportDate_period: {
+          userId,
+          reportDate: jstToday(),
+          period: "today",
+        },
+      },
+      select: { advice: true, summary: true },
+    });
+    const text = report?.advice?.trim() || report?.summary?.trim();
+    return text || fallback;
+  } catch {
+    return fallback;
+  }
+}
 import { SITE_NAME_EN } from "@/lib/site";
 import { PopularRanking } from "@/components/PopularRanking";
 import { HomeGreeting } from "@/components/HomeGreeting";
@@ -36,7 +72,7 @@ import { AffSlot } from "@/components/ui-common";
  * 現状はログイン前でも迷わない導線を優先し、静的なプレースホルダーで構成している。
  */
 export default async function TopPage() {
-  const score = await todayScore();
+  const [score, oneLiner] = await Promise.all([todayScore(), todayOneLiner()]);
   return (
     <div className="flex flex-col gap-8 px-5">
       <section className="flex flex-col items-center gap-4 pt-4 text-center">
@@ -58,11 +94,7 @@ export default async function TopPage() {
 
       <section className="flex flex-col items-center gap-4 rounded-card border border-ink-700 bg-ink-900/60 px-6 py-8 shadow-lantern">
         <ScoreOrb score={score} size={140} />
-        <p className="text-center text-sm text-paper-200">
-          今日は「流れに乗る」日。
-          <br />
-          焦らなくても大丈夫。
-        </p>
+        <p className="whitespace-pre-line text-center text-sm text-paper-200">{oneLiner}</p>
         <Link
           href="/report"
           className="w-full rounded-full bg-gold-500 py-3 text-center font-bold text-ink-950 transition active:scale-[0.98]"

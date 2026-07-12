@@ -44,6 +44,9 @@ model User {
   dailyUsages   DailyUsage[]
   pointBalance  PointBalance?
   shrineReviews ShrineReview[]
+  karte          UserKarte? // 人生カルテ(AI人生コンパス転換 2026-07-12)
+  karteSnapshots KarteSnapshot[]
+  lifeEvents     LifeEvent[]
 
   @@map("users")
 }
@@ -124,6 +127,8 @@ model FortuneResult {
   horoscope     Json? // ホロスコープの判定内容
 
   weatherContext Json? // 天気(低気圧等)連携時のコンテキスト(CL12)
+
+  engineVersion  Int            @default(1) // D-0a: 占術エンジン世代。過去結果は再計算しない(v1=暫定/v2=正式)
 
   createdAt     DateTime       @default(now())
 
@@ -359,6 +364,7 @@ model DailyReport {
   scoreBreakdown Json // {base, envModifier, themeBonus} 監査・スコアリング改善用
   details        Json? // 出来事/注意/おすすめ各3つ(理由付き)+総評(要件⑤ 2026-07-08)。旧行はnull
   generatedBy    String   @default("llm") // llm | fallback
+  engineVersion  Int      @default(1) // D-0a: 占術エンジン世代。過去レポートは再計算しない
   createdAt      DateTime @default(now())
 
   @@unique([userId, reportDate, period])
@@ -366,6 +372,8 @@ model DailyReport {
 }
 
 /// RAG知識ベース。会話ログの生テキストではなく構造化サマリを保存する(仕様書「会話ログの活用」準拠)。
+/// 検索は初期は pg_trgm 全文検索(manual_life_karte.sql のGINインデックス参照)。
+/// 将来 pgvector へ拡張する場合は embedding 列を追加し、検索実装(karte-repository)側だけ差し替える。
 model KnowledgeEntry {
   id                String          @id @default(uuid())
   userId            String
@@ -376,10 +384,68 @@ model KnowledgeEntry {
   finalAdvice       String
   nextAction        String
   tags              Json // string[]
+  emotionalTone     String? // positive | negative | mixed | neutral (AI人生コンパス 2026-07-12)
+  importance        Int             @default(3) // 1-5。RAG想起の優先度(高いほど思い出されやすい)
+  lastReferencedAt  DateTime? // 最後にRAGで参照された日時。記憶の鮮度管理に使う
   createdAt         DateTime        @default(now())
 
   @@index([userId, createdAt])
   @@map("knowledge_entries")
+}
+
+// ---------------- 人生カルテ (AI人生コンパス転換 2026-07-12) ----------------
+
+/// 人生カルテ本体(User 1:1)。「AIがこの人を現在どう理解しているか」のスナップショット。
+/// 更新はチャット完了時・日次バッチのパイプライン(Step3)から行い、更新前の状態は
+/// KarteSnapshot へ退避してから上書きする(変遷を失わないための運用ルール)。
+model UserKarte {
+  userId           String   @id
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  basicPersonality Json? // 基本性格 { fromDivination: {...}, fromConversation: {...} }
+  concernTrends    Json? // 悩み傾向 { categoryWeights: {RELATIONSHIP: 0.4,...}, recurringThemes: string[] }
+  lifeCycle        Json? // 人生周期(四柱大運・年運のキャッシュ。再計算コスト削減用)
+  values           Json? // 価値観・大切にしていること string[]
+  aiInsights       String? // AI分析(自由記述。カルテ画面「AI分析」欄にそのまま表示)
+  version          Int      @default(1) // KarteSnapshot.version と同期して単調増加
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("user_kartes")
+}
+
+/// カルテの変遷履歴(追記専用)。「AIの理解がどう深まったか」を時系列で残す。
+/// UPDATE/DELETEはアプリケーションから行わない(AuditLogと同じ運用)。
+model KarteSnapshot {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  version   Int // 退避時点の UserKarte.version
+  data      Json // UserKarte 全カラムのスナップショット
+  trigger   String // session_completed | daily_batch | manual
+  createdAt DateTime @default(now())
+
+  @@unique([userId, version])
+  @@map("karte_snapshots")
+}
+
+/// 会話から抽出した人生イベント。「占い結果の羅列」ではなく「人生の変遷」として保存する。
+/// 抽出はチャットパイプライン(Step3)のパーソナリティ分析ステップで行う。
+model LifeEvent {
+  id          String          @id @default(uuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId   String? // 抽出元の FortuneSession.id(緩結合。セッション削除でも人生イベントは残す)
+  occurredAt  DateTime? // 出来事が起きた時期(会話から推定。不明なら null = 「時期不明」表示)
+  category    ConsultCategory
+  title       String // 例:「転職を決意した」「長年の友人と和解した」
+  description String?
+  emotion     String? // positive | negative | mixed | neutral
+  importance  Int             @default(3) // 1-5。カルテ画面の表示優先度・RAG想起優先度
+  createdAt   DateTime        @default(now())
+
+  @@index([userId, occurredAt])
+  @@index([userId, createdAt])
+  @@map("life_events")
 }
 
 /// CL25: 分析イベント(DWH基盤)。トークン使用量を含む全行動ログ。GM10「トークン数でコスト管理」準拠。

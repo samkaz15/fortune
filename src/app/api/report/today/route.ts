@@ -7,6 +7,7 @@ import { generateDailyReport } from "@/lib/decision-report";
 import { getWeatherContext } from "@/lib/weather";
 import { calculateStreak } from "@/lib/streak";
 import { jstToday } from "@/lib/jst";
+import { FORTUNE_ENGINE_VERSION } from "@/lib/fortune-engine/shichu";
 
 /**
  * GET /api/report/today
@@ -121,6 +122,7 @@ async function handleReport(req: NextRequest, userId: string) {
         details: result.details as object,
         scoreBreakdown: result.scoreBreakdown as unknown as object,
         generatedBy: result.generatedBy,
+        engineVersion: FORTUNE_ENGINE_VERSION, // D-0a: 生成時点のエンジン世代を記録
       },
     });
   trackEvent("report_generated", {}, userId);
