@@ -11,6 +11,7 @@
  * LLMにも辞書値以外の断定を禁じ、フォールバックは辞書値の合成のみで文章化する。
  */
 import { calculateShichu } from "@/lib/fortune-engine/shichu";
+import { callClaudeJson } from "@/lib/llm/claude-client";
 import { deriveSanmeiProfile } from "@/lib/fortune-engine/sanmei-dictionary";
 import { calculateHoroscope } from "@/lib/fortune-engine/horoscope";
 import { calculateSeimei } from "@/lib/fortune-engine/seimei";
@@ -87,8 +88,7 @@ export async function generateFreeReading(params: {
 
 /* ============================== LLM層 ============================== */
 
-const SAKANA_AI_ENDPOINT = process.env.SAKANA_AI_API_ENDPOINT ?? "";
-const SAKANA_AI_API_KEY = process.env.SAKANA_AI_API_KEY ?? "";
+// Claude APIに集約(2026-07-12・CEOアーキテクチャ指示)。SAKANA_AI_*環境変数は廃止。
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
 const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
 
@@ -125,24 +125,13 @@ function buildLlmMessages(name: string, signals: Record<string, unknown>) {
 async function tryLlmReading(name: string, signals: Record<string, unknown>): Promise<FreeReadingSections | null> {
   const { system, user } = buildLlmMessages(name, signals);
 
-  if (SAKANA_AI_API_KEY && SAKANA_AI_ENDPOINT) {
-    try {
-      const res = await fetch(SAKANA_AI_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${SAKANA_AI_API_KEY}` },
-        body: JSON.stringify({ system, prompt: user }),
-        signal: AbortSignal.timeout(20_000),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const parsed = parseSections(typeof data === "string" ? data : data.text ?? data.message ?? "");
-        if (parsed) return parsed;
-      }
-    } catch (e) {
-      console.error("[free-reading] Sakana AI failed, falling back:", e instanceof Error ? e.message : e);
-    }
-  }
+  // Claude APIに集約(2026-07-12)。Sakana AIは廃止。
+  const claudeResult = await callClaudeJson({ systemPrompt: system, userInput: user, maxTokens: 2048 }, (raw) =>
+    validateSections(raw)
+  );
+  if (claudeResult) return claudeResult;
 
+  // OpenAIは緊急時の二次フォールバックとして残す(Claude API側の障害時のみ到達)
   if (OPENAI_API_KEY) {
     try {
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -170,18 +159,29 @@ async function tryLlmReading(name: string, signals: Record<string, unknown>): Pr
   return null;
 }
 
-/** LLM出力の検証: 全セクション・全フィールドが非空文字列のときだけ採用する */
+/** LLM出力の検証: 全セクション・全フィールドが非空文字列のときだけ採用する(文字列入力版・OpenAI用) */
 function parseSections(raw: string): FreeReadingSections | null {
   try {
     const obj = JSON.parse(raw.replace(/```json|```/g, "").trim());
+    return validateSections(obj);
+  } catch {
+    return null;
+  }
+}
+
+/** 同上・パース済みオブジェクト版(Claudeクライアントは既にJSON.parse済みの値を渡してくる) */
+function validateSections(obj: unknown): FreeReadingSections | null {
+  try {
+    if (typeof obj !== "object" || obj === null) return null;
+    const rec = obj as Record<string, unknown>;
     for (const key of SECTION_KEYS) {
-      const v = obj[key];
+      const v = rec[key];
       if (key === "closing") {
         if (typeof v !== "string" || v.length === 0) return null;
         continue;
       }
       if (typeof v !== "object" || v === null) return null;
-      for (const field of Object.values(v)) {
+      for (const field of Object.values(v as Record<string, unknown>)) {
         if (typeof field !== "string" || field.length === 0) return null;
       }
     }

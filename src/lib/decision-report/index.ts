@@ -8,6 +8,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
+import { callClaudeJson } from "@/lib/llm/claude-client";
 import { interpretDayStem } from "@/lib/fortune-engine/interpretation-dictionary";
 import { calculateShichu } from "@/lib/fortune-engine/shichu";
 import { calculateKyusei, KyuseiSummary } from "@/lib/fortune-engine/kyusei";
@@ -200,33 +201,20 @@ type LlmInput = {
   signals: unknown;
 };
 
-/** Sakana AI呼び出し(未設定時はnullを返しフォールバックへ)。1回だけリトライする */
+/** LLM呼び出し(Claude APIに集約 2026-07-12)。未設定時はnullを返しフォールバックへ。1回だけリトライする */
 async function generateWithRetry(input: LlmInput): Promise<ReportContent | null> {
-  const endpoint = process.env.SAKANA_AI_API_ENDPOINT;
-  const apiKey = process.env.SAKANA_AI_API_KEY;
-  if (!endpoint || !apiKey) return null; // 開発環境はフォールバックを既定動作とする
-
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          system_prompt: `${loadConsultingPolicy()}\n\n${CHARACTER_PROMPT}\n\n${loadTaskPrompt()}`.trim(),
-          user_input: JSON.stringify(input),
-          response_format: "json",
-        }),
-      });
-      if (!res.ok) continue;
-      const data = await res.json();
-      const raw = typeof data === "string" ? data : (data.message ?? data.content ?? "");
-      const parsed = reportSchema.safeParse(typeof raw === "string" ? JSON.parse(raw) : raw);
-      if (parsed.success) return parsed.data;
-    } catch {
-      // リトライへ
+  const parsed = await callClaudeJson(
+    {
+      systemPrompt: `${loadConsultingPolicy()}\n\n${CHARACTER_PROMPT}\n\n${loadTaskPrompt()}`.trim(),
+      userInput: input,
+      maxTokens: 1024,
+    },
+    (raw) => {
+      const result = reportSchema.safeParse(raw);
+      return result.success ? result.data : null;
     }
-  }
-  return null;
+  );
+  return parsed;
 }
 
 

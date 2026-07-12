@@ -6,6 +6,7 @@ import { ScoreOrb } from "@/components/ScoreOrb";
 import { GlassMosaic, ScrollProgress, ShareRow, AffSlot, DramaticLoading, PrimaryButton } from "@/components/ui-common";
 import { saveFortuneInput, loadFortuneInput } from "@/lib/fortune-input";
 import { BirthDateSelect } from "@/components/BirthDateSelect";
+import { ChatWindow } from "@/components/ChatWindow";
 
 interface DetailItem {
   text: string;
@@ -237,6 +238,10 @@ export default function ReportPageClient() {
       <img src="/character/report_hero.jpg" alt="錦糸町の少年" className="mb-3 h-36 w-full rounded-card border border-ink-700 object-cover shadow-lantern" style={{ objectPosition: "center 30%" }} />
       <h1 className="font-display text-lg text-paper-50">今日の運勢</h1>
       <p className="mt-1 text-center text-[11px] text-paper-500">今日の運勢を占って自分を確認</p>
+
+      {/* チャット(Step3 2026-07-12): レポート本体より上に設置(CEO指示) */}
+      <ChatWindow />
+
       {/* 期間タブ(UI仕様v5): 同UI・同ロジック。有料会員のみ全文、無料部分以降はモザイク */}
       <div className="mt-3 grid grid-cols-4 gap-1.5">
         {(["today", "week", "month", "nextMonth"] as const).map((p) => (
