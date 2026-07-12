@@ -1,14 +1,41 @@
 import { cookies } from "next/headers";
+import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 /**
- * 認証は Supabase Auth を想定した最小スタブ。
- * TODO: @supabase/ssr を導入し、Cookieベースのセッション検証に差し替える。
- * 現状は開発用に Cookie "dev_user_id" があればそれをユーザーIDとして扱う。
+ * 認証本実装 (2026-07-12): Supabase Auth ベース。
+ * - 本番: SupabaseのCookieセッションからauthユーザーを取得し、User.authIdで自社Userに解決する
+ * - 開発: SUPABASE環境変数が未設定なら従来のdev_user_id Cookieにフォールバック
+ *   (dev_user_id方式は本番では機能しない=偽装Cookieを渡されてもSupabase側で無視される)
+ * - authIdでUserが見つからない場合はemailで探して authId をバックフィル
+ *   (レガシーユーザーの遅延移行。docs/supabase_auth_migration.md 参照)
  */
 export async function getCurrentUserId(): Promise<string | null> {
-  const store = cookies();
-  const devUserId = store.get("dev_user_id")?.value;
-  return devUserId ?? null;
+  if (!isSupabaseConfigured()) {
+    const devUserId = cookies().get("dev_user_id")?.value;
+    return devUserId ?? null;
+  }
+  try {
+    const supabase = createSupabaseServerClient();
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser(); // Cookieのアクセストークンをサーバー側で検証
+    if (!authUser) return null;
+
+    const byAuthId = await prisma.user.findUnique({ where: { authId: authUser.id }, select: { id: true } });
+    if (byAuthId) return byAuthId.id;
+
+    // レガシーユーザー: email一致でauthIdをバックフィルして紐付ける
+    if (authUser.email) {
+      const byEmail = await prisma.user.findUnique({ where: { email: authUser.email }, select: { id: true, authId: true } });
+      if (byEmail && !byEmail.authId) {
+        await prisma.user.update({ where: { id: byEmail.id }, data: { authId: authUser.id } });
+        return byEmail.id;
+      }
+    }
+    return null; // auth上には居るが自社Userが無い(サインアップ途中で中断等)。signup完了を促す
+  } catch {
+    return null; // fail-closed: 検証できないセッションはゲスト扱い
+  }
 }
 
 export async function requireUserId(): Promise<string> {

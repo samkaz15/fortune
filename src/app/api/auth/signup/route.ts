@@ -3,10 +3,12 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import { trackEvent } from "@/lib/analytics";
+import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 /**
  * POST /api/auth/signup
- * TODO: 本番はSupabase Authに置き換える。現状はCookieベースの最小実装。
+ * 認証本実装(2026-07-12): Supabase Authで登録し、authIdを自社Userに紐付ける。
+ * SUPABASE環境変数が未設定の開発環境では従来のCookie方式にフォールバック。
  * 画面遷移設計書「新規登録」の役割通り、生年月日・名前・性別等の初回入力もここで回収する。
  *
  * CL20: referralCode(招待コード)を任意で受け取り、有効なら
@@ -43,6 +45,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "EMAIL_TAKEN" }, { status: 409 });
   }
 
+  // Supabase Auth登録(本番)。セッションCookieはSDKが設定する
+  let authId: string | null = null;
+  const useSupabase = isSupabaseConfigured();
+  if (useSupabase) {
+    const supabase = createSupabaseServerClient();
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error || !data.user) {
+      const status = error?.status === 422 ? 409 : 500; // 422=already registered
+      return NextResponse.json({ error: "AUTH_SIGNUP_FAILED", detail: error?.message }, { status });
+    }
+    authId = data.user.id;
+  }
+
   const inviter = referralCode
     ? await prisma.user.findUnique({ where: { referralCode } })
     : null;
@@ -51,7 +66,9 @@ export async function POST(req: NextRequest) {
     const created = await tx.user.create({
       data: {
         email,
-        passwordHash: hashPassword(password),
+        authId, // Supabase Auth紐付け(dev時はnull)
+        // Supabase利用時はパスワードをSupabase側でのみ管理し、自社DBにはハッシュも残さない
+        passwordHash: useSupabase ? null : hashPassword(password),
         referredByUserId: inviter?.id,
         profile: {
           create: {
@@ -104,6 +121,7 @@ export async function POST(req: NextRequest) {
   }
 
   const res = NextResponse.json({ userId: user.id });
+  if (useSupabase) return res; // セッションはSupabaseのCookieが担う
   res.cookies.set("dev_user_id", user.id, {
     httpOnly: true,
     sameSite: "lax",

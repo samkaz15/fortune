@@ -23,6 +23,7 @@ datasource db {
 
 model User {
   id            String   @id @default(uuid())
+  authId        String?  @unique // Supabase Auth(auth.users.id)紐付け(2026-07-12認証本実装)。レガシーはログイン時バックフィル
   email         String   @unique
   passwordHash  String?
   authProvider  String   @default("email") // email | google | apple 等
