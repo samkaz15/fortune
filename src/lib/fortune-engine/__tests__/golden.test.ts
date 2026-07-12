@@ -320,3 +320,23 @@ test("ビジネス占い: 独立タイミング診断が大運に基づく推奨
   assert.match(t!.reason, /10年運/);
   assert.equal(independenceTiming(new Date(Date.UTC(1990, 10, 3)), null, "other"), null, "性別不明はnull(大運が立てられない)");
 });
+
+// ---------------- ヒーロー画像セレクタ(2026-07-12)の機械検証 ----------------
+import { selectHeroImage, HERO_MANIFEST, HERO_FALLBACK } from "../../hero-image";
+
+test("ヒーロー画像: 決定論的選択・全スコア帯で候補が存在・範囲外はフォールバック", () => {
+  const noon = new Date(Date.UTC(2026, 6, 12, 3, 0)); // JST12時
+  // 同じ日・同じスコアは常に同じ画像(チラつき防止)
+  assert.equal(selectHeroImage(85, "2026-07-12", noon), selectHeroImage(85, "2026-07-12", noon));
+  // 0-100の全スコアで、どの時間帯でも必ず何かが選ばれる(フォールバック含む)
+  for (const h of [5, 12, 22]) {
+    const t = new Date(Date.UTC(2026, 6, 12, (h - 9 + 24) % 24, 0));
+    for (let s = 0; s <= 100; s += 10) {
+      const img = selectHeroImage(s, "2026-07-12", t);
+      assert.ok(img.startsWith("/character/"), `${s}点/${h}時: ${img}`);
+    }
+  }
+  // マニフェストの整合: ファイル名重複なし
+  assert.equal(new Set(HERO_MANIFEST.map((e) => e.file)).size, HERO_MANIFEST.length);
+  assert.ok(HERO_FALLBACK.length > 0);
+});

@@ -8,6 +8,7 @@ import { saveFortuneInput, loadFortuneInput } from "@/lib/fortune-input";
 import { BirthDateSelect } from "@/components/BirthDateSelect";
 import { ChatWindow } from "@/components/ChatWindow";
 import { SakuraPetals } from "@/components/SakuraPetals";
+import { HeroImage } from "@/components/HeroImage";
 
 interface DetailItem {
   text: string;
@@ -236,9 +237,8 @@ export default function ReportPageClient() {
     <div className="flex flex-col gap-6 px-5 pt-4 pb-8">
       <ScrollProgress />
       {showPetals && <SakuraPetals />}
-      {/* 今日の運勢ヒーロー(CEO指定画像 2026-07-07) */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/character/report_hero.jpg" alt="錦糸町の少年" className="mb-3 h-36 w-full rounded-card border border-ink-700 object-cover shadow-lantern" style={{ objectPosition: "center 30%" }} />
+      {/* 今日の運勢ヒーロー(2026-07-12: Gemini生成10枚のスコア×時間帯出し分け。未配置時は従来画像) */}
+      <HeroImage score={report.score} dateKey={report.reportDate} />
       <h1 className="font-display text-lg text-paper-50">今日の運勢</h1>
       <p className="mt-1 text-center text-[11px] text-paper-500">今日の運勢を占って自分を確認</p>
 
