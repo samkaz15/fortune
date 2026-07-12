@@ -13,9 +13,8 @@ import { prisma } from "@/lib/db";
 import { callClaude } from "@/lib/llm/claude-client";
 import { CHARACTER_PROMPT } from "@/lib/fortune-engine";
 import { searchKnowledge, searchLifeEvents, getUserKarte, getUnresolvedNextActions, updateUserKarte, type RetrievedKnowledge, type RetrievedLifeEvent } from "@/lib/karte/repository";
-import { calculateFourPillars } from "@/lib/fortune-engine/shichu";
-import { calculateSanmei } from "@/lib/fortune-engine/sanmei";
 import { calculateTaiun } from "@/lib/fortune-engine/taiun";
+import { buildMultiIndexReading } from "@/lib/fortune-engine/multi-index";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { ConsultCategory } from "@/generated/prisma/enums";
@@ -73,13 +72,19 @@ export async function runChatTurn(params: {
   const profile = await prisma.userProfile.findUnique({ where: { userId } });
   let divination: Record<string, unknown> = {};
   if (profile) {
-    const fp = calculateFourPillars(profile.birthDate, profile.birthTime);
-    const sanmei = calculateSanmei(profile.birthDate, profile.birthTime);
+    // マルチインデックス(2026-07-12): 10指標の「根拠の束」+大運。
+    // convergence(指標間の一致)は断定の根拠に、矛盾は「バグの解剖」の材料に使われる(Layer0)
+    const nameParts = profile.name.trim().split(/[\s　]+/);
+    const multi = buildMultiIndexReading({
+      birthDate: profile.birthDate,
+      birthTime: profile.birthTime,
+      familyName: nameParts[0] ?? null,
+      givenName: nameParts[1] ?? nameParts[0] ?? null,
+      mbtiType: profile.mbti,
+    });
     const taiun = calculateTaiun(profile.birthDate, profile.birthTime, profile.gender);
     divination = {
-      dayPillar: `${fp.day.stem}${fp.day.branch}`,
-      mainStar: sanmei.mainStar,
-      yearStar: sanmei.yearStar,
+      ...multi,
       currentTaiun: taiun?.pillars.find((p) => p.startAgeYears <= ageOf(profile.birthDate) && ageOf(profile.birthDate) < p.startAgeYears + 10) ?? null,
     };
   }

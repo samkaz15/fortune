@@ -204,3 +204,71 @@ test("大運: 性別不明の場合はnull(順逆が定義できない)", () => 
   assert.equal(calculateTaiun(new Date(Date.UTC(1990, 5, 15)), null, "other"), null);
   assert.equal(calculateTaiun(new Date(Date.UTC(1990, 5, 15)), null, null), null);
 });
+
+// ---------------- マルチインデックス(2026-07-12): 新指標の機械検証 ----------------
+import { calculateNumerology } from "../indexes/numerology";
+import { calculateAnimal, calculateGogyoBalance } from "../indexes/animal-gogyo";
+import { calculateShibi } from "../indexes/shibi";
+import { buildMultiIndexReading } from "../multi-index";
+
+test("数秘術: 桁和還元とマスターナンバーの扱い(現代=11/22/33残し、カバラ=11/22残し)", () => {
+  // 1990-11-03: 1+9+9+0+1+1+0+3=24 → 6
+  const a = calculateNumerology(new Date(Date.UTC(1990, 10, 3)));
+  assert.equal(a.lifePathModern, 6);
+  assert.equal(a.lifePathKabbalah, 6);
+  // 1990-11-08: 合計29 → 11(マスター。両流派とも残す)
+  const b = calculateNumerology(new Date(Date.UTC(1990, 10, 8)));
+  assert.equal(b.lifePathModern, 11);
+  assert.equal(b.lifePathKabbalah, 11);
+  // 1980-09-06: 合計33 → 現代=33残し / カバラ=3+3=6へ還元
+  const c = calculateNumerology(new Date(Date.UTC(1980, 8, 6)));
+  assert.equal(c.lifePathModern, 33);
+  assert.equal(c.lifePathKabbalah, 6);
+});
+
+test("五行バランス: 1990-11-03 14:30 は火が最多・木が欠け", () => {
+  // 庚午年 丙戌月 壬申日 丁未時 → 火3(丙丁午) 土2(戌未) 金2(庚申) 水1(壬) 木0
+  const g = calculateGogyoBalance(new Date(Date.UTC(1990, 10, 3)), "14:30");
+  assert.deepEqual(g.counts, { 木: 0, 火: 3, 土: 2, 金: 2, 水: 1 });
+  assert.equal(g.dominant, "火");
+  assert.equal(g.lacking, "木");
+});
+
+test("動物アーキタイプ: 壬申日(壬の長生=申)はこじか", () => {
+  const a = calculateAnimal(new Date(Date.UTC(1990, 10, 3)));
+  assert.equal(a.stage, "長生");
+  assert.equal(a.animal, "こじか");
+});
+
+test("紫微斗数(簡易): 命宮・身宮の起宮式と旧暦月テーブル", () => {
+  // 1990-11-03 = 旧暦9月(lunar-python検証値)。14:30 = 未時(7)
+  // 命宮 = (寅2 + (9-1) - 7) mod 12 = 3 = 卯 / 身宮 = (2 + 8 + 7) mod 12 = 5 = 巳
+  const s = calculateShibi(new Date(Date.UTC(1990, 10, 3)), "14:30");
+  assert.ok(s);
+  assert.equal(s!.lunarMonth, 9);
+  assert.equal(s!.meiguu, "卯");
+  assert.equal(s!.shinguu, "巳");
+  // 出生時間なしはnull(時刻必須の占術)
+  assert.equal(calculateShibi(new Date(Date.UTC(1990, 10, 3)), null), null);
+});
+
+test("マルチインデックス統合: 10指標が束ねられ、欠けても他が返る", () => {
+  const full = buildMultiIndexReading({
+    birthDate: new Date(Date.UTC(1990, 10, 3)),
+    birthTime: "14:30",
+    familyName: "山田",
+    givenName: "太郎",
+    mbtiType: "INTJ",
+  });
+  assert.equal(full.shichu.dayPillar, "壬申");
+  assert.equal(full.mbti?.type, "INTJ");
+  assert.ok(full.shibi);
+  assert.ok(full.indexCount >= 9);
+
+  // 最小情報(生年月日のみ)でも落ちずに返る
+  const minimal = buildMultiIndexReading({ birthDate: new Date(Date.UTC(1990, 10, 3)) });
+  assert.equal(minimal.seimei, null);
+  assert.equal(minimal.mbti, null);
+  assert.equal(minimal.shibi, null); // 時刻なし
+  assert.ok(minimal.indexCount >= 6);
+});

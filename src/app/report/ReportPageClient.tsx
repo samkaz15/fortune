@@ -7,6 +7,7 @@ import { GlassMosaic, ScrollProgress, ShareRow, AffSlot, DramaticLoading, Primar
 import { saveFortuneInput, loadFortuneInput } from "@/lib/fortune-input";
 import { BirthDateSelect } from "@/components/BirthDateSelect";
 import { ChatWindow } from "@/components/ChatWindow";
+import { SakuraPetals } from "@/components/SakuraPetals";
 
 interface DetailItem {
   text: string;
@@ -50,6 +51,7 @@ function formatReportDateLabel(reportDate: string, period: "today" | "week" | "m
 
 export default function ReportPageClient() {
   const [report, setReport] = useState<Report | null>(null);
+  const [showPetals, setShowPetals] = useState(false); // 診断結果の花びら演出(2026-07-12)
   const [error, setError] = useState<{ message: string; href: string; label: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState<"today" | "week" | "month" | "nextMonth">("today");
@@ -128,7 +130,7 @@ export default function ReportPageClient() {
         })
         .then((d) => {
           // 想定形かを検証してから表示(不正データでの真っ白クラッシュを防ぐ)
-          if (d && d.keywords && typeof d.score === "number") { cacheRef.current[period] = d; setReport(d); }
+          if (d && d.keywords && typeof d.score === "number") { cacheRef.current[period] = d; setReport(d); setShowPetals(true); }
           else if (d) setError({ message: "レポートの生成に失敗しました。少し時間をおいて、もう一度開いてみてください。", href: "/report", label: "再読み込み" });
         })
         .catch(() => setError({ message: "通信に失敗しました。電波の良いところで再読み込みしてください。", href: "/report", label: "再読み込み" }))
@@ -233,6 +235,7 @@ export default function ReportPageClient() {
   return (
     <div className="flex flex-col gap-6 px-5 pt-4 pb-8">
       <ScrollProgress />
+      {showPetals && <SakuraPetals />}
       {/* 今日の運勢ヒーロー(CEO指定画像 2026-07-07) */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/character/report_hero.jpg" alt="錦糸町の少年" className="mb-3 h-36 w-full rounded-card border border-ink-700 object-cover shadow-lantern" style={{ objectPosition: "center 30%" }} />
