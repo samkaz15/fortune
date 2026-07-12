@@ -4,13 +4,13 @@
  * prompts/analysis/sanmei_index.v1.json（十大主星/十二大従星/組み合わせ/職業マッピング）を読み込み、
  * 生年月日から算出した日干支をもとに「本質の型」と「相性のよい業界×部署」を返す。
  *
- * ⚠️ 主星の導出は本来「日干 × 蔵干」の対照表で決まるが、MVPでは
- * 日干十干を10主星へ決定論的に対応づける簡易版（一貫性・再現性は担保）。
- * 命式の精密化はCEO監修時に対照表へ差し替え可能な構造にしてある。
+ * D-11案B(2026-07-12): 主星は日干×月干の通変星から導出する方式へ正式化済み。
+ * 蔵干を用いた人体星図の完全再現はPhase2(監修者と対照表確定後)。
  */
 import fs from "node:fs";
 import path from "node:path";
-import { JIKKAN, stemBranchIndexFromDate } from "./shichu";
+import { calculateFourPillars } from "./shichu";
+import { shuseiOf } from "./tsuhensei";
 
 export interface MajorStar {
   core: string;
@@ -43,20 +43,6 @@ function loadIndex(): SanmeiIndex {
   return cached;
 }
 
-// 日干（十干）→ 主星の対応（MVP簡易版・順序対応）
-const STEM_TO_STAR: Record<string, string> = {
-  甲: "貫索星",
-  乙: "石門星",
-  丙: "鳳閣星",
-  丁: "調舒星",
-  戊: "禄存星",
-  己: "司禄星",
-  庚: "車騎星",
-  辛: "牽牛星",
-  壬: "龍高星",
-  癸: "玉堂星",
-};
-
 export interface SanmeiProfile {
   starName: string;
   star: MajorStar;
@@ -64,11 +50,14 @@ export interface SanmeiProfile {
   fitJobs: { industry: string; department: string; grade: "best" | "good" }[];
 }
 
-/** 生年月日 → 主星プロファイル（本質＋業界×部署の相性） */
-export function deriveSanmeiProfile(birthDate: Date): SanmeiProfile {
-  const idx = stemBranchIndexFromDate(birthDate);
-  const stem = JIKKAN[idx % 10];
-  const starName = STEM_TO_STAR[stem] ?? "司禄星";
+/**
+ * 生年月日 → 主星プロファイル（本質＋業界×部署の相性）。
+ * D-11案B(2026-07-12): 旧来の「日干→主星」1:1簡易対応を廃止し、
+ * 日干×月干の通変星から十大主星を導出する方式(tsuhensei.ts)へ差し替え。
+ */
+export function deriveSanmeiProfile(birthDate: Date, birthTime?: string | null): SanmeiProfile {
+  const fp = calculateFourPillars(birthDate, birthTime);
+  const starName = shuseiOf(fp.day.index % 10, fp.month.index % 10);
   const index = loadIndex();
   const star = index.ten_major_stars[starName];
 

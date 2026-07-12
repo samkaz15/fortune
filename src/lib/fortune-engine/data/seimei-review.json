@@ -1,0 +1,481 @@
+{
+ "generatedAt": "2026-07-12",
+ "note": "監修者レビュー用。fallbackKyujitaiのassumedStrokesは新字体からのフォールバック値、kanjivgOverridesはKANJIDICとKanjiVG(筆順データ)の不一致でKanjiVG筆画数を採用した文字。いずれも正しい画数が異なる場合は radical-adjustments.json へ記入すれば最優先で反映される。",
+ "fallbackKyujitai": [
+  {
+   "kyujitai": "內",
+   "assumedStrokes": 4,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "戶",
+   "assumedStrokes": 4,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "羽",
+   "assumedStrokes": 6,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "靑",
+   "assumedStrokes": 8,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "敎",
+   "assumedStrokes": 11,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "旅",
+   "assumedStrokes": 10,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "館",
+   "assumedStrokes": 16,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "晴",
+   "assumedStrokes": 12,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "飯",
+   "assumedStrokes": 12,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "梅",
+   "kanjidic": 15,
+   "assumedStrokes": 10,
+   "reason": "suspected_kouki_count"
+  },
+  {
+   "kyujitai": "說",
+   "assumedStrokes": 14,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "吿",
+   "assumedStrokes": 7,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "連",
+   "assumedStrokes": 10,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "產",
+   "assumedStrokes": 11,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "稅",
+   "assumedStrokes": 12,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "脫",
+   "assumedStrokes": 11,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "郞",
+   "kanjidic": 14,
+   "assumedStrokes": 9,
+   "reason": "suspected_kouki_count"
+  },
+  {
+   "kyujitai": "淸",
+   "assumedStrokes": 11,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "益",
+   "assumedStrokes": 10,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "精",
+   "assumedStrokes": 14,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "絕",
+   "assumedStrokes": 12,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "飼",
+   "assumedStrokes": 13,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "鬭",
+   "kanjidic": 24,
+   "assumedStrokes": 18,
+   "reason": "suspected_kouki_count"
+  },
+  {
+   "kyujitai": "契",
+   "assumedStrokes": 9,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "隆",
+   "kanjidic": 17,
+   "assumedStrokes": 11,
+   "reason": "suspected_kouki_count"
+  },
+  {
+   "kyujitai": "銳",
+   "assumedStrokes": 15,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "鄕",
+   "kanjidic": 17,
+   "assumedStrokes": 11,
+   "reason": "suspected_kouki_count"
+  },
+  {
+   "kyujitai": "娛",
+   "assumedStrokes": 10,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "歲",
+   "assumedStrokes": 13,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "蓮",
+   "assumedStrokes": 13,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "尙",
+   "assumedStrokes": 8,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "遼",
+   "assumedStrokes": 15,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "吳",
+   "assumedStrokes": 7,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "悅",
+   "assumedStrokes": 10,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "靖",
+   "assumedStrokes": 13,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "閱",
+   "assumedStrokes": 15,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "廉",
+   "assumedStrokes": 13,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "薰",
+   "kanjidic": 20,
+   "assumedStrokes": 16,
+   "reason": "suspected_kouki_count"
+  },
+  {
+   "kyujitai": "瘦",
+   "kanjidic": 15,
+   "assumedStrokes": 12,
+   "reason": "suspected_kouki_count"
+  },
+  {
+   "kyujitai": "彥",
+   "assumedStrokes": 9,
+   "reason": "no_data"
+  },
+  {
+   "kyujitai": "麵",
+   "kanjidic": 20,
+   "assumedStrokes": 16,
+   "reason": "suspected_kouki_count"
+  },
+  {
+   "kyujitai": "蘭",
+   "assumedStrokes": 19,
+   "reason": "no_data"
+  }
+ ],
+ "kanjivgOverrides": [
+  {
+   "char": "噌",
+   "kanjidic": 14,
+   "adopted_kanjivg": 15
+  },
+  {
+   "char": "牙",
+   "kanjidic": 5,
+   "adopted_kanjivg": 4
+  },
+  {
+   "char": "遜",
+   "kanjidic": 13,
+   "adopted_kanjivg": 14
+  },
+  {
+   "char": "謎",
+   "kanjidic": 16,
+   "adopted_kanjivg": 17
+  },
+  {
+   "char": "賭",
+   "kanjidic": 15,
+   "adopted_kanjivg": 16
+  },
+  {
+   "char": "漣",
+   "kanjidic": 13,
+   "adopted_kanjivg": 14
+  },
+  {
+   "char": "逢",
+   "kanjidic": 10,
+   "adopted_kanjivg": 11
+  },
+  {
+   "char": "迂",
+   "kanjidic": 6,
+   "adopted_kanjivg": 7
+  },
+  {
+   "char": "厩",
+   "kanjidic": 12,
+   "adopted_kanjivg": 14
+  },
+  {
+   "char": "餌",
+   "kanjidic": 14,
+   "adopted_kanjivg": 15
+  },
+  {
+   "char": "襖",
+   "kanjidic": 17,
+   "adopted_kanjivg": 18
+  },
+  {
+   "char": "迦",
+   "kanjidic": 8,
+   "adopted_kanjivg": 9
+  },
+  {
+   "char": "晦",
+   "kanjidic": 10,
+   "adopted_kanjivg": 11
+  },
+  {
+   "char": "葛",
+   "kanjidic": 11,
+   "adopted_kanjivg": 12
+  },
+  {
+   "char": "祇",
+   "kanjidic": 8,
+   "adopted_kanjivg": 9
+  },
+  {
+   "char": "笈",
+   "kanjidic": 9,
+   "adopted_kanjivg": 10
+  },
+  {
+   "char": "僅",
+   "kanjidic": 12,
+   "adopted_kanjivg": 13
+  },
+  {
+   "char": "櫛",
+   "kanjidic": 17,
+   "adopted_kanjivg": 19
+  },
+  {
+   "char": "祁",
+   "kanjidic": 7,
+   "adopted_kanjivg": 8
+  },
+  {
+   "char": "稽",
+   "kanjidic": 16,
+   "adopted_kanjivg": 15
+  },
+  {
+   "char": "倦",
+   "kanjidic": 11,
+   "adopted_kanjivg": 10
+  },
+  {
+   "char": "捲",
+   "kanjidic": 12,
+   "adopted_kanjivg": 11
+  },
+  {
+   "char": "榊",
+   "kanjidic": 13,
+   "adopted_kanjivg": 14
+  },
+  {
+   "char": "逗",
+   "kanjidic": 10,
+   "adopted_kanjivg": 11
+  },
+  {
+   "char": "穿",
+   "kanjidic": 10,
+   "adopted_kanjivg": 9
+  },
+  {
+   "char": "遡",
+   "kanjidic": 13,
+   "adopted_kanjivg": 14
+  },
+  {
+   "char": "辿",
+   "kanjidic": 6,
+   "adopted_kanjivg": 7
+  },
+  {
+   "char": "歎",
+   "kanjidic": 14,
+   "adopted_kanjivg": 15
+  },
+  {
+   "char": "衷",
+   "kanjidic": 10,
+   "adopted_kanjivg": 9
+  },
+  {
+   "char": "槌",
+   "kanjidic": 13,
+   "adopted_kanjivg": 14
+  },
+  {
+   "char": "辻",
+   "kanjidic": 5,
+   "adopted_kanjivg": 6
+  },
+  {
+   "char": "兎",
+   "kanjidic": 8,
+   "adopted_kanjivg": 7
+  },
+  {
+   "char": "堵",
+   "kanjidic": 11,
+   "adopted_kanjivg": 12
+  },
+  {
+   "char": "遁",
+   "kanjidic": 12,
+   "adopted_kanjivg": 13
+  },
+  {
+   "char": "灘",
+   "kanjidic": 21,
+   "adopted_kanjivg": 22
+  },
+  {
+   "char": "這",
+   "kanjidic": 10,
+   "adopted_kanjivg": 11
+  },
+  {
+   "char": "樋",
+   "kanjidic": 14,
+   "adopted_kanjivg": 15
+  },
+  {
+   "char": "瀕",
+   "kanjidic": 20,
+   "adopted_kanjivg": 19
+  },
+  {
+   "char": "娩",
+   "kanjidic": 11,
+   "adopted_kanjivg": 10
+  },
+  {
+   "char": "蓬",
+   "kanjidic": 13,
+   "adopted_kanjivg": 14
+  },
+  {
+   "char": "迄",
+   "kanjidic": 6,
+   "adopted_kanjivg": 7
+  },
+  {
+   "char": "儲",
+   "kanjidic": 17,
+   "adopted_kanjivg": 18
+  },
+  {
+   "char": "餅",
+   "kanjidic": 14,
+   "adopted_kanjivg": 15
+  },
+  {
+   "char": "煉",
+   "kanjidic": 12,
+   "adopted_kanjivg": 13
+  },
+  {
+   "char": "繡",
+   "kanjidic": 18,
+   "adopted_kanjivg": 19
+  },
+  {
+   "char": "圍",
+   "kanjidic": 13,
+   "adopted_kanjivg": 12
+  },
+  {
+   "char": "搜",
+   "kanjidic": 13,
+   "adopted_kanjivg": 12
+  },
+  {
+   "char": "龜",
+   "kanjidic": 18,
+   "adopted_kanjivg": 16
+  },
+  {
+   "char": "潛",
+   "kanjidic": 17,
+   "adopted_kanjivg": 15
+  },
+  {
+   "char": "禱",
+   "kanjidic": 18,
+   "adopted_kanjivg": 19
+  },
+  {
+   "char": "禰",
+   "kanjidic": 18,
+   "adopted_kanjivg": 19
+  }
+ ]
+}

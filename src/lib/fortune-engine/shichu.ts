@@ -9,6 +9,21 @@
  *   本格的な暦計算ライブラリ(または専用API)に差し替えることを推奨する。
  */
 
+/**
+ * 占術エンジン世代(D-0a 2026-07-12)。
+ * v1 = 暫定ロジック(擬似画数・節入り無視・旧EPOCH 1984/2/2)
+ * v2 = D-9修正(日柱基準1984/1/31)以降の正式化フェーズ
+ * 保存済みの FortuneResult / DailyReport は再計算しない。新規生成時のみこの値を書き込む。
+ */
+export const FORTUNE_ENGINE_VERSION = 2;
+
+import {
+  jstMomentOf,
+  sexagenaryYearIndex,
+  sexagenaryMonthIndex,
+  hourPillarOf,
+} from "./setsuiri";
+
 export const JIKKAN = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"] as const;
 export const JUNISHI = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"] as const;
 
@@ -26,32 +41,38 @@ export interface ShichuSummary {
   advice: string;
 }
 
-// 1984/2/2(甲子の年とされる基準日に近い日)を甲子の起点として簡易計算する
-const EPOCH = Date.UTC(1984, 1, 2);
+// 日柱の甲子基準日(D-9検証済み 2026-07-12)。
+// 旧実装は 1984/2/2 を甲子としていたが、独立した暦実装2系統(lunar-python / cnlunar)との
+// 突き合わせで 1984/2/2=丙寅日 と判明(=全日柱が2日ズレていた)。
+// 正しくは 1984/1/31=甲子日。60日周期(1984/3/31=甲子)・60年前(1924/2/15=甲子)の整合も検証済み。
+// 検証コードとゴールデンテスト: src/lib/fortune-engine/__tests__/golden.test.ts
+const EPOCH = Date.UTC(1984, 0, 31);
 const MS_PER_DAY = 86_400_000;
 
 export function stemBranchIndexFromDate(date: Date): number {
-  const diffDays = Math.floor((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - EPOCH) / MS_PER_DAY);
+  // 2026-07-12: 暦日をJST壁時計で解釈するよう修正。
+  // 旧実装はサーバーローカル(Vercel=UTC)の日付部品を使っており、JSTの0:00〜8:59に
+  // 「今日」を計算すると前日の日柱になる潜在バグがあった。
+  const m = jstMomentOf(date);
+  const diffDays = Math.floor((Date.UTC(m.year, m.month - 1, m.day) - EPOCH) / MS_PER_DAY);
   return ((diffDays % 60) + 60) % 60;
 }
 
 /**
- * 月柱インデックス(2026-07-07新設)。
- * ⚠️ 正式な四柱推命は二十四節気の「節」(立春・啓蟄等)で月が切り替わるが、
- * ここではグレゴリオ暦の月初を基準にした簡易近似(CEO占術監修時に節入り計算へ差し替え推奨)。
- * 年初からの通し月数を60で循環させ、日柱とは独立した「月の巡り」を表現する。
+ * 月柱インデックス(D-6正式化 2026-07-12)。
+ * 十二節(立春・啓蟄・…)の節入り時刻(JST)で月が切り替わり、月干は五虎遁で導出する。
+ * 実装本体は setsuiri.ts(節入りテーブル1900-2100同梱)。
  */
 export function monthPillarIndexFromDate(date: Date): number {
-  const monthsFromEpoch = (date.getFullYear() - 2000) * 12 + date.getMonth();
-  return ((monthsFromEpoch % 60) + 60) % 60;
+  return sexagenaryMonthIndex(jstMomentOf(date));
 }
 
 /**
- * 年柱インデックス(2026-07-07新設)。
- * ⚠️ 正式には立春(2/4頃)を境に年が切り替わるが、ここではグレゴリオ暦の1/1を基準にした簡易近似。
+ * 年柱インデックス(D-6正式化 2026-07-12)。
+ * 立春の節入り時刻(JST)を境に年が切り替わる。1984=甲子年基準。実装本体は setsuiri.ts。
  */
 export function yearPillarIndexFromDate(date: Date): number {
-  return (((date.getFullYear() - 1984) % 60) + 60) % 60; // 1984=甲子年を基準
+  return sexagenaryYearIndex(jstMomentOf(date));
 }
 
 export type PeriodUnit = "day" | "week" | "month" | "year";
@@ -111,5 +132,81 @@ export function calculateShichu(
     element,
     wave: Math.max(20, Math.min(100, wave)),
     advice: adviceMap[element],
+  };
+}
+
+// ---------------- 四柱一括計算 (D-7: 時柱対応 / 2026-07-12) ----------------
+
+export interface Pillar {
+  index: number; // 60干支インデックス(甲子=0)
+  stem: (typeof JIKKAN)[number];
+  branch: (typeof JUNISHI)[number];
+}
+
+export interface FourPillars {
+  year: Pillar;
+  month: Pillar;
+  day: Pillar;
+  /** 出生時間(birthTime)が未入力の場合はnull(三柱推命として扱う) */
+  hour: Pillar | null;
+  /** 夜子時(23時台)により日柱を翌日へ進めたか(換日説オプション有効時のみtrue) */
+  dayAdvancedByLateRatHour: boolean;
+}
+
+export interface FourPillarsOptions {
+  /**
+   * 夜子時(23時台)の日柱の扱い(要監修確認・両流派が実在):
+   * - false(既定): 夜子時説 — 日柱は当日のまま、時干のみ翌日の日干から五鼠遁で起こす
+   *   (検証に用いたlunar-pythonの既定と同一)
+   * - true: 換日説 — 23時以降は日柱ごと翌日に切り替える
+   * どちらの流派でも時柱そのものは同一になる(時干は常に翌日干ベース)。
+   */
+  lateRatHourAdvancesDay?: boolean;
+}
+
+function pillarOf(index: number): Pillar {
+  return { index, stem: JIKKAN[index % 10], branch: JUNISHI[index % 12] };
+}
+
+/**
+ * 生年月日(+任意の出生時間 "HH:mm")から四柱を立てる。
+ * - 年柱: 立春切替 / 月柱: 節入り切替+五虎遁 / 日柱: D-9検証済みEPOCH / 時柱: 五鼠遁
+ * - birthDate はDBの慣例どおり「UTC深夜の暦日」として保存されている前提
+ *   (jstMomentOfでJST壁時計へ正規化して解釈する)。
+ * - 地方時補正はPhase2(D-7決定)。
+ */
+export function calculateFourPillars(
+  birthDate: Date,
+  birthTime?: string | null,
+  options: FourPillarsOptions = {}
+): FourPillars {
+  const timeMatch = birthTime?.match(/^(\d{1,2}):(\d{2})$/);
+  const hour = timeMatch ? Number(timeMatch[1]) : null;
+  const minute = timeMatch ? Number(timeMatch[2]) : 0;
+
+  // 年柱・月柱の節入り境界判定には出生「時刻」まで反映する(節入り当日生まれの精度確保)。
+  // 出生時間未入力なら正午とみなす(JstMomentの既定。節入り当日・時刻不明は誤差があり得る)
+  const birthMoment = { ...jstMomentOf(birthDate), hour: hour ?? undefined, minute: hour !== null ? minute : undefined };
+
+  const dayIdx = stemBranchIndexFromDate(birthDate);
+  let day = pillarOf(dayIdx);
+  let hourPillar: Pillar | null = null;
+  let dayAdvanced = false;
+
+  if (hour !== null && hour >= 0 && hour <= 23) {
+    const h = hourPillarOf(dayIdx, hour, minute); // 時干は流派に依らず翌日干ベース(hourPillarOf内で処理)
+    hourPillar = pillarOf(h.index);
+    if (h.dayAdvanced && options.lateRatHourAdvancesDay) {
+      dayAdvanced = true;
+      day = pillarOf((dayIdx + 1) % 60); // 換日説: 日柱も翌日へ
+    }
+  }
+
+  return {
+    year: pillarOf(sexagenaryYearIndex(birthMoment)),
+    month: pillarOf(sexagenaryMonthIndex(birthMoment)),
+    day,
+    hour: hourPillar,
+    dayAdvancedByLateRatHour: dayAdvanced,
   };
 }
